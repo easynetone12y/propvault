@@ -1,0 +1,89 @@
+# PropVault Backend — application.yml
+# All secrets read from environment variables. Never commit .env or application-local.yml.
+
+spring:
+  application:
+    name: propvault-backend
+
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:propvault_db}
+    username: ${DB_USERNAME:propvault}
+    password: ${DB_PASSWORD:secret}
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      connection-timeout: 30000
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    open-in-view: false
+    properties:
+      hibernate.dialect: org.hibernate.dialect.PostgreSQLDialect
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+
+  mail:
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail.smtp.auth: true
+      mail.smtp.starttls.enable: true
+
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 100MB
+
+server:
+  port: ${PORT:8080}
+  servlet:
+    context-path: /api/v1
+  compression:
+    enabled: true
+
+propvault:
+  jwt:
+    secret: ${JWT_SECRET:cHJvcHZhdWx0LXN1cGVyLXNlY3JldC1rZXktMjU2LWJpdHMtbWluaW11bS0yMDI0}
+    expiration: 86400000
+    refresh-expiration: 604800000
+  aws:
+    access-key: ${AWS_ACCESS_KEY:}
+    secret-key: ${AWS_SECRET_KEY:}
+    region: ${AWS_REGION:ap-south-1}
+    bucket-name: ${AWS_BUCKET:propvault-media}
+  razorpay:
+    key-id: ${RAZORPAY_KEY_ID:}
+    key-secret: ${RAZORPAY_KEY_SECRET:}
+    webhook-secret: ${RAZORPAY_WEBHOOK_SECRET:}
+  cors:
+    allowed-origins:
+      - http://localhost:3000
+      - http://localhost:5173
+      - https://propvault.in
+      - https://app.propvault.in
+  gst-percent: 18.0
+  trial-days: 14
+  app:
+    url: ${APP_URL:http://localhost:5173}
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+logging:
+  level:
+    com.propvault: DEBUG
+    org.springframework.security: WARN

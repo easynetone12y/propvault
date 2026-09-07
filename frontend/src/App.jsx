@@ -1,0 +1,5932 @@
+import { useState, useEffect, useRef, useCallback } from "react";
+
+// ─── Design tokens ────────────────────────────────────────────
+const C = {
+  blue:       "#185FA5",
+  blueDark:   "#0C447C",
+  blueLight:  "#E6F1FB",
+  blueText:   "#0C447C",
+  green:      "#3B6D11",
+  greenLight: "#EAF3DE",
+  amber:      "#BA7517",
+  amberLight: "#FAEEDA",
+  red:        "#A32D2D",
+  redLight:   "#FCEBEB",
+  purple:     "#534AB7",
+  purpleLight:"#EEEDFE",
+  wa:         "#25D366",
+  gray100:    "#F7F8FA",
+  gray200:    "#F0F1F4",
+  gray300:    "#E2E4EA",
+  gray400:    "#B8BAC4",
+  gray600:    "#6B7280",
+  gray700:    "#374151",
+  gray800:    "#1F2937",
+  white:      "#FFFFFF",
+};
+
+// ─── Mock data ─────────────────────────────────────────────────
+const PROPERTIES = [
+  { id:"p1", title:"3 BHK Flat, Vasant Kunj", city:"Delhi", locality:"Vasant Kunj", state:"Delhi",
+    price:12000000, priceLabel:"₹1.20 Cr", purpose:"SALE", type:"APARTMENT", beds:3, baths:2,
+    area:1450, floor:4, totalFloors:12, buildYear:2019, furnishing:"Semi-Furnished",
+    agent:{id:"a1",name:"Deepak Sharma",company:"Sharma Homes",phone:"9876543210",verified:true,city:"Delhi"},
+    featured:true, status:"APPROVED", views:312, description:"Spacious 3 BHK in the heart of Vasant Kunj with modular kitchen, premium fittings, and stunning Aravalli views. Minutes from malls, schools, and metro.",
+    amenities:["Swimming Pool","Gym","Parking","Lift","Power Backup","Security","Garden","Club House"],
+    virtualTour:"https://matterport.com", gradient:"135deg,#B5D4F4,#85B7EB", icon:"🏢" },
+  { id:"p2", title:"2 BHK Villa, Dwarka Sec 12", city:"Delhi", locality:"Dwarka", state:"Delhi",
+    price:35000, priceLabel:"₹35,000/mo", purpose:"RENT", type:"VILLA", beds:2, baths:2,
+    area:1100, floor:1, totalFloors:2, buildYear:2015, furnishing:"Fully Furnished",
+    agent:{id:"a2",name:"Lakshmi Raghavan",company:"Lakshmi Estates",phone:"9900112233",verified:true,city:"Chennai"},
+    featured:false, status:"APPROVED", views:187, description:"Well-maintained 2 BHK villa in Dwarka with beautiful garden and parking. Fully furnished with modular kitchen.",
+    amenities:["Parking","Garden","Security","Power Backup"],
+    gradient:"135deg,#C0DD97,#639922", icon:"🏡" },
+  { id:"p3", title:"Office Space, Connaught Place", city:"Delhi", locality:"Connaught Place", state:"Delhi",
+    price:95000, priceLabel:"₹95,000/mo", purpose:"RENT", type:"COMMERCIAL", beds:0, baths:3,
+    area:2200, floor:5, totalFloors:10, buildYear:2012, furnishing:"Unfurnished",
+    agent:{id:"a1",name:"Deepak Sharma",company:"Sharma Homes",phone:"9876543210",verified:true,city:"Delhi"},
+    featured:false, status:"PENDING_REVIEW", views:98, description:"Premium commercial office space in the heart of CP. Ideal for corporate offices, showrooms, and co-working.",
+    amenities:["Lift","Power Backup","Security","Parking","Internet"],
+    gradient:"135deg,#FAC775,#BA7517", icon:"🏢" },
+  { id:"p4", title:"4 BHK Penthouse, BKC", city:"Mumbai", locality:"BKC", state:"Maharashtra",
+    price:45000000, priceLabel:"₹4.50 Cr", purpose:"SALE", type:"PENTHOUSE", beds:4, baths:4,
+    area:3800, floor:28, totalFloors:30, buildYear:2022, furnishing:"Fully Furnished",
+    agent:{id:"a3",name:"Ravi Kumar",company:"Ravi Realty",phone:"9988776655",verified:false,city:"Mumbai"},
+    featured:true, status:"APPROVED", views:542, description:"Luxury penthouse with panoramic views of the Arabian Sea. Private terrace, home theatre, and designer interiors.",
+    amenities:["Swimming Pool","Gym","Parking","Lift","Concierge","Club House","Home Theatre"],
+    gradient:"135deg,#CECBF6,#534AB7", icon:"🏙️" },
+  { id:"p5", title:"Plot, Outer Ring Road", city:"Bangalore", locality:"Whitefield", state:"Karnataka",
+    price:6800000, priceLabel:"₹68 L", purpose:"SALE", type:"PLOT", beds:0, baths:0,
+    area:2400, floor:0, totalFloors:0, buildYear:0, furnishing:"N/A",
+    agent:{id:"a4",name:"Arjun Shetty",company:"BLR Spaces",phone:"9812345678",verified:true,city:"Bangalore"},
+    featured:false, status:"APPROVED", views:73, description:"Corner plot with wide road access. Clear title, all approvals in place. Ideal for residential or commercial construction.",
+    amenities:["Corner Plot","Wide Road Access","BMRDA Approved"],
+    gradient:"135deg,#D3D1C7,#888780", icon:"🟫" },
+  { id:"p6", title:"Studio Apartment, Koregaon Park", city:"Pune", locality:"Koregaon Park", state:"Maharashtra",
+    price:18000, priceLabel:"₹18,000/mo", purpose:"RENT", type:"APARTMENT", beds:1, baths:1,
+    area:480, floor:2, totalFloors:5, buildYear:2018, furnishing:"Fully Furnished",
+    agent:{id:"a2",name:"Lakshmi Raghavan",company:"Lakshmi Estates",phone:"9900112233",verified:true,city:"Chennai"},
+    featured:false, status:"APPROVED", views:241, description:"Cozy fully furnished studio in the premium Koregaon Park neighbourhood. Walking distance to cafes, restaurants, and IT parks.",
+    amenities:["Gym","Parking","Lift","Power Backup","Security"],
+    gradient:"135deg,#F5C4B3,#D85A30", icon:"🏠" },
+];
+
+const LEADS = [
+  {id:"l1", name:"Amit Singh", phone:"+91 98765 12345", email:"amit@gmail.com", property:"3 BHK, Vasant Kunj", source:"FORM", status:"NEW", date:"Today, 10:32 AM", message:"I am interested in this property and would like to schedule a visit."},
+  {id:"l2", name:"Priya Mehta", phone:"+91 99001 23456", email:"priya@gmail.com", property:"2 BHK, Dwarka", source:"WHATSAPP", status:"FOLLOW_UP", date:"Yesterday, 3:15 PM", message:"Please share more details about the amenities."},
+  {id:"l3", name:"Suresh Nair", phone:"+91 88234 56789", email:"suresh@gmail.com", property:"Office, CP", source:"CALL", status:"CLOSED_WON", date:"3 days ago", message:"Deal closed. Looking forward to possession."},
+  {id:"l4", name:"Neha Kapoor", phone:"+91 77890 34567", email:"neha@gmail.com", property:"3 BHK, Vasant Kunj", source:"FORM", status:"VISIT_SCHEDULED", date:"2 days ago", message:"Visit scheduled for Saturday morning."},
+  {id:"l5", name:"Vikram Das", phone:"+91 91234 56789", email:"vikram@gmail.com", property:"2 BHK, Dwarka", source:"WHATSAPP", status:"NEW", date:"Today, 8:14 AM", message:"Is this still available? I want to move in next month."},
+  {id:"l6", name:"Sanjay Iyer", phone:"+91 80011 22334", email:"sanjay@gmail.com", property:"Penthouse BKC", source:"FORM", status:"NEGOTIATION", date:"5 days ago", message:"We are in final stages of negotiation. Awaiting bank approval."},
+];
+
+const AGENTS = [
+  {id:"a1", company:"Sharma Homes", name:"Deepak Sharma", city:"Delhi", plan:"Premium", listings:87, active:72, status:"Active", license:"DL-2024-0192", joined:"Jan 2024", mrr:5999},
+  {id:"a2", company:"Lakshmi Estates", name:"Lakshmi Raghavan", city:"Chennai", plan:"Pro", listings:58, active:51, status:"Active", license:"TN-2023-0763", joined:"Nov 2023", mrr:2999},
+  {id:"a3", company:"Ravi Realty", name:"Ravi Kumar", city:"Mumbai", plan:"Pro", listings:34, active:28, status:"Pending", license:"MH-2024-0441", joined:"Mar 2024", mrr:2999},
+  {id:"a4", company:"BLR Spaces", name:"Arjun Shetty", city:"Bangalore", plan:"Premium", listings:124, active:110, status:"Active", license:"KA-2023-0092", joined:"Sep 2023", mrr:5999},
+  {id:"a5", company:"Patel Properties", name:"Ankit Patel", city:"Ahmedabad", plan:"Basic", listings:12, active:10, status:"Pending", license:"GJ-2024-0098", joined:"Mar 2024", mrr:999},
+  {id:"a6", company:"Gupta Homes", name:"Ramesh Gupta", city:"Lucknow", plan:"Basic", listings:8, active:0, status:"Suspended", license:"UP-2024-0210", joined:"Feb 2024", mrr:0},
+];
+
+const PLANS = [
+  { id:"plan1", name:"Basic", price:999, yearly:9990, maxListings:20, featured:0, features:["20 property listings","Lead management","Agent profile","WhatsApp integration","Basic support"], highlight:false },
+  { id:"plan2", name:"Pro",   price:2999, yearly:29990, maxListings:100, featured:5, features:["100 property listings","5 featured slots/month","Video uploads","Analytics dashboard","Priority support","WhatsApp + Call integration"], highlight:true },
+  { id:"plan3", name:"Premium",price:5999, yearly:59990, maxListings:-1, featured:-1, features:["Unlimited listings","Unlimited featured slots","AI description generator","Verified agent badge","Dedicated account manager","API access"], highlight:false },
+];
+
+const INVOICES = [
+  {id:"INV-2024-000342", plan:"Pro", amount:"₹2,999", gst:"₹540", total:"₹3,539", date:"20 Mar 2024", status:"Paid"},
+  {id:"INV-2024-000198", plan:"Pro", amount:"₹2,999", gst:"₹540", total:"₹3,539", date:"20 Feb 2024", status:"Paid"},
+  {id:"INV-2024-000089", plan:"Pro", amount:"₹2,999", gst:"₹540", total:"₹3,539", date:"20 Jan 2024", status:"Paid"},
+];
+
+// ─── Utility components ───────────────────────────────────────
+function Badge({ color="blue", children, small }) {
+  const map = { blue:[C.blueLight,C.blueText], green:[C.greenLight,C.green], amber:[C.amberLight,C.amber],
+                red:[C.redLight,C.red], purple:[C.purpleLight,C.purple], gray:[C.gray200,C.gray600] };
+  const [bg, fg] = map[color] || map.blue;
+  return (
+    <span style={{ background:bg, color:fg, padding:small?"2px 7px":"3px 9px",
+      borderRadius:20, fontSize:small?10:11, fontWeight:600, display:"inline-block", whiteSpace:"nowrap" }}>
+      {children}
+    </span>
+  );
+}
+
+function Btn({ children, variant="outline", size="md", onClick, disabled, icon, fullWidth, style={} }) {
+  const base = { cursor:disabled?"not-allowed":"pointer", border:"1px solid", borderRadius:8,
+    fontFamily:"inherit", fontWeight:500, transition:"all .15s", display:"inline-flex",
+    alignItems:"center", gap:6, justifyContent:"center", opacity:disabled?.5:1,
+    padding: size==="sm"?"6px 12px":size==="lg"?"12px 24px":"8px 16px",
+    fontSize: size==="sm"?12:14, width:fullWidth?"100%":"auto" };
+  const variants = {
+    primary:  {...base, background:C.blue, color:"#fff", borderColor:C.blue},
+    outline:  {...base, background:"transparent", color:C.gray800, borderColor:C.gray300},
+    ghost:    {...base, background:"transparent", color:C.gray600, border:"none"},
+    success:  {...base, background:C.green, color:"#fff", borderColor:C.green},
+    danger:   {...base, background:C.red, color:"#fff", borderColor:C.red},
+    wa:       {...base, background:C.wa, color:"#fff", borderColor:C.wa},
+  };
+  return (
+    <button style={{...variants[variant], ...style}} onClick={onClick} disabled={disabled}>
+      {icon && <span style={{fontSize:16}}>{icon}</span>}{children}
+    </button>
+  );
+}
+
+function Card({ children, style={}, padding="18px 20px", onClick }) {
+  return (
+    <div onClick={onClick} style={{ background:C.white, border:`1px solid ${C.gray300}`,
+      borderRadius:12, padding, ...style, cursor:onClick?"pointer":"default" }}>
+      {children}
+    </div>
+  );
+}
+
+function MetricCard({ label, value, sub, icon, accent=C.blue }) {
+  return (
+    <div style={{ background:C.gray100, borderRadius:10, padding:"14px 16px" }}>
+      <div style={{ fontSize:12, color:C.gray600, marginBottom:6, display:"flex", alignItems:"center", gap:5 }}>
+        {icon && <span style={{fontSize:16}}>{icon}</span>}{label}
+      </div>
+      <div style={{ fontSize:22, fontWeight:600, color:C.gray800 }}>{value}</div>
+      {sub && <div style={{ fontSize:11, color:C.gray400, marginTop:3 }}>{sub}</div>}
+    </div>
+  );
+}
+
+function Input({ label, placeholder, type="text", value, onChange, rows, options, required }) {
+  const base = { width:"100%", padding:"9px 12px", border:`1px solid ${C.gray300}`, borderRadius:8,
+    fontSize:13, fontFamily:"inherit", color:C.gray800, background:C.white, boxSizing:"border-box",
+    outline:"none" };
+  return (
+    <div style={{ marginBottom:14 }}>
+      {label && <label style={{ display:"block", fontSize:12, fontWeight:500, color:C.gray600, marginBottom:5 }}>
+        {label}{required && <span style={{color:C.red}}> *</span>}
+      </label>}
+      {rows ? <textarea rows={rows} placeholder={placeholder} value={value} onChange={onChange}
+          style={{...base, resize:"vertical"}} />
+        : options ? <select value={value} onChange={onChange} style={{...base, cursor:"pointer"}}>
+            {options.map(o => <option key={o}>{o}</option>)}
+          </select>
+        : <input type={type} placeholder={placeholder} value={value} onChange={onChange} style={base} />
+      }
+    </div>
+  );
+}
+
+function SectionHeader({ title, action }) {
+  return (
+    <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:16 }}>
+      <h2 style={{ fontSize:16, fontWeight:600, color:C.gray800, margin:0 }}>{title}</h2>
+      {action}
+    </div>
+  );
+}
+
+function Table({ cols, rows }) {
+  return (
+    <div style={{ overflowX:"auto" }}>
+      <table style={{ width:"100%", borderCollapse:"collapse", fontSize:13 }}>
+        <thead>
+          <tr>
+            {cols.map(c => <th key={c} style={{ textAlign:"left", padding:"8px 12px", fontSize:11,
+              fontWeight:600, color:C.gray600, borderBottom:`1px solid ${C.gray300}`,
+              background:C.gray100, whiteSpace:"nowrap" }}>{c}</th>)}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row, i) => (
+            <tr key={i} style={{ borderBottom:`1px solid ${C.gray200}` }}
+              onMouseEnter={e => e.currentTarget.style.background=C.gray100}
+              onMouseLeave={e => e.currentTarget.style.background="transparent"}>
+              {row.map((cell, j) => <td key={j} style={{ padding:"11px 12px", verticalAlign:"middle" }}>{cell}</td>)}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function ProgressBar({ value, max=-1, color=C.blue }) {
+  const pct = max === -1 ? 35 : Math.min(100, (value/max)*100);
+  return (
+    <div>
+      <div style={{ display:"flex", justifyContent:"space-between", fontSize:12, color:C.gray600, marginBottom:4 }}>
+        <span>{max===-1 ? `${value} used` : `${value} / ${max} used`}</span>
+        <span style={{color:pct>80?C.red:C.gray400}}>{Math.round(pct)}%</span>
+      </div>
+      <div style={{ height:6, background:C.gray200, borderRadius:3, overflow:"hidden" }}>
+        <div style={{ height:"100%", width:`${pct}%`, background:pct>80?C.red:color, borderRadius:3, transition:"width .5s" }} />
+      </div>
+    </div>
+  );
+}
+
+function Alert({ children, type="info" }) {
+  const map = { info:[C.blueLight,C.blueText,"ℹ️"], warn:[C.amberLight,C.amber,"⚠️"], success:[C.greenLight,C.green,"✅"] };
+  const [bg, fg, ico] = map[type];
+  return (
+    <div style={{ background:bg, color:fg, borderRadius:8, padding:"10px 14px",
+      fontSize:13, display:"flex", alignItems:"center", gap:8, marginBottom:14 }}>
+      <span>{ico}</span>{children}
+    </div>
+  );
+}
+
+// ─── Property Card ─────────────────────────────────────────────
+/**
+ * PropertyCard — reusable listing card.
+ * Props:
+ *   prop           – property object
+ *   onView         – called with prop when card body is clicked
+ *   onFav          – called with prop.id when heart is toggled
+ *   onAgentClick   – optional; called with agent object when agent name is clicked
+ *   favs           – array of saved property ids
+ */
+function PropertyCard({ prop, onView, onFav, onAgentClick, favs=[] }) {
+  const isFav = favs.includes(prop.id);
+  return (
+    <Card padding="0" style={{ overflow:"hidden", cursor:"pointer" }} onClick={() => onView(prop)}>
+      {/* ── Hero image / gradient ── */}
+      <div style={{ height:140, background:`linear-gradient(${prop.gradient})`,
+        position:"relative", display:"flex", alignItems:"center", justifyContent:"center" }}>
+        <span style={{ fontSize:40, opacity:.5 }}>{prop.icon}</span>
+
+        {/* Purpose badge */}
+        <span style={{ position:"absolute", top:8, left:8, background:prop.purpose==="SALE"?C.blue:C.green,
+          color:"#fff", fontSize:10, padding:"3px 8px", borderRadius:20, fontWeight:600 }}>
+          {prop.purpose==="SALE" ? "For Sale" : "For Rent"}
+        </span>
+
+        {/* Featured badge */}
+        {prop.featured && (
+          <span style={{ position:"absolute", top:8, right:8, background:C.amber,
+            color:"#fff", fontSize:10, padding:"2px 8px", borderRadius:20, fontWeight:600 }}>
+            ★ Featured
+          </span>
+        )}
+
+        {/* Favourite toggle */}
+        {onFav && (
+          <button onClick={e => { e.stopPropagation(); onFav(prop.id); }}
+            style={{ position:"absolute", bottom:8, right:8, background:"rgba(255,255,255,.92)",
+              border:"none", borderRadius:"50%", width:30, height:30, cursor:"pointer",
+              fontSize:16, display:"flex", alignItems:"center", justifyContent:"center",
+              boxShadow:"0 1px 4px rgba(0,0,0,.15)" }}>
+            {isFav ? "❤️" : "🤍"}
+          </button>
+        )}
+      </div>
+
+      {/* ── Card body ── */}
+      <div style={{ padding:"12px 14px" }}>
+        <div style={{ fontWeight:600, fontSize:14, color:C.gray800, marginBottom:2,
+          whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
+          {prop.title}
+        </div>
+        <div style={{ fontSize:17, fontWeight:700, color:C.blue, margin:"4px 0 8px" }}>
+          {prop.priceLabel}
+        </div>
+
+        {/* Key stats row */}
+        <div style={{ display:"flex", gap:12, fontSize:11, color:C.gray600, flexWrap:"wrap" }}>
+          {prop.beds > 0 && <span>🛏 {prop.beds} BHK</span>}
+          <span>📐 {prop.area.toLocaleString()} ft²</span>
+          <span>📍 {prop.city}</span>
+        </div>
+
+        {/* Agent row — clickable if onAgentClick provided */}
+        <div style={{ fontSize:11, color:C.gray400, marginTop:6,
+          display:"flex", alignItems:"center", gap:4 }}>
+          {onAgentClick ? (
+            <button
+              onClick={e => { e.stopPropagation(); onAgentClick(prop.agent); }}
+              style={{ background:"none", border:"none", cursor:"pointer", padding:0,
+                fontSize:11, color:C.blue, fontFamily:"inherit", fontWeight:500,
+                textDecoration:"underline", textDecorationStyle:"dotted" }}>
+              {prop.agent.company}
+            </button>
+          ) : (
+            <span>{prop.agent.company}</span>
+          )}
+          {prop.agent.verified && <span style={{color:C.blue}}>✓</span>}
+          <span style={{marginLeft:"auto"}}>👁 {prop.views}</span>
+        </div>
+      </div>
+    </Card>
+  );
+}
+
+// ─── Navigation ────────────────────────────────────────────────
+// (Full Topbar defined below near line 1912 with notification bell)
+
+// ─── BUYER: Search Screen ──────────────────────────────────────
+function SearchScreen({ setScreen, setDetailProp, setSelectedAgent, favs, setFavs, isLoggedIn }) {
+  const [query, setQuery] = useState("");
+  const [typeF, setTypeF] = useState(null);
+  const [purposeF, setPurposeF] = useState(null);
+  const [bedsF, setBedsF] = useState(null);
+  const [showModal, setShowModal] = useState(false);
+  const [contactProp, setContactProp] = useState(null);
+
+  const filtered = PROPERTIES.filter(p => {
+    if (p.status !== "APPROVED") return false;
+    if (typeF && p.type !== typeF) return false;
+    if (purposeF && p.purpose !== purposeF) return false;
+    if (bedsF && p.beds !== bedsF) return false;
+    if (query && !p.title.toLowerCase().includes(query.toLowerCase()) &&
+        !p.city.toLowerCase().includes(query.toLowerCase()) &&
+        !p.locality.toLowerCase().includes(query.toLowerCase())) return false;
+    return true;
+  });
+
+  const toggleFav = (id) => setFavs(f => f.includes(id) ? f.filter(x=>x!==id) : [...f,id]);
+
+  const FilterChip = ({ label, active, onClick }) => (
+    <button onClick={onClick} style={{ padding:"5px 13px", borderRadius:20, border:`1px solid ${active?C.blue:C.gray300}`,
+      background: active?C.blue:"transparent", color: active?"#fff":C.gray600,
+      fontSize:12, cursor:"pointer", fontFamily:"inherit", transition:"all .15s", whiteSpace:"nowrap" }}>
+      {label}
+    </button>
+  );
+
+  return (
+    <div>
+      {/* Search hero */}
+      <div style={{ background:`linear-gradient(135deg, ${C.blue}, ${C.blueDark})`,
+        padding:"28px 24px", marginBottom:0 }}>
+        <h1 style={{ color:"#fff", fontSize:22, fontWeight:700, margin:"0 0 4px" }}>
+          Find your perfect property in India
+        </h1>
+        <p style={{ color:"rgba(255,255,255,.75)", fontSize:13, margin:"0 0 16px" }}>
+          {PROPERTIES.filter(p=>p.status==="APPROVED").length} verified listings across Delhi, Mumbai, Bangalore & more
+        </p>
+        <div style={{ display:"flex", gap:8 }}>
+          <input value={query} onChange={e=>setQuery(e.target.value)}
+            placeholder="Search by city, locality, landmark…"
+            style={{ flex:1, padding:"10px 14px", border:"none", borderRadius:8,
+              fontSize:13, fontFamily:"inherit", outline:"none" }} />
+          <Btn variant="outline" style={{ background:"rgba(255,255,255,.15)", color:"#fff",
+            borderColor:"rgba(255,255,255,.3)" }}>Search</Btn>
+        </div>
+      </div>
+
+      <div style={{ padding:"16px 24px" }}>
+        {/* Filters */}
+        <div style={{ display:"flex", gap:6, flexWrap:"wrap", marginBottom:16, alignItems:"center" }}>
+          {["APARTMENT","VILLA","PLOT","COMMERCIAL","PENTHOUSE"].map(t =>
+            <FilterChip key={t} label={t.charAt(0)+t.slice(1).toLowerCase()}
+              active={typeF===t} onClick={()=>setTypeF(typeF===t?null:t)} />)}
+          <div style={{width:1,height:22,background:C.gray300,margin:"0 4px"}} />
+          <FilterChip label="For Sale"  active={purposeF==="SALE"} onClick={()=>setPurposeF(purposeF==="SALE"?null:"SALE")} />
+          <FilterChip label="For Rent"  active={purposeF==="RENT"} onClick={()=>setPurposeF(purposeF==="RENT"?null:"RENT")} />
+          <div style={{width:1,height:22,background:C.gray300,margin:"0 4px"}} />
+          {[1,2,3,4].map(b =>
+            <FilterChip key={b} label={`${b} BHK`} active={bedsF===b} onClick={()=>setBedsF(bedsF===b?null:b)} />)}
+          {(typeF||purposeF||bedsF||query) &&
+            <button onClick={()=>{setTypeF(null);setPurposeF(null);setBedsF(null);setQuery("");}}
+              style={{fontSize:12,color:C.red,background:"none",border:"none",cursor:"pointer",fontFamily:"inherit"}}>
+              ✕ Clear all
+            </button>}
+        </div>
+
+        <div style={{ fontSize:12, color:C.gray600, marginBottom:14 }}>
+          {filtered.length} properties found {query && `for "${query}"`}
+        </div>
+
+        {filtered.length === 0 ? (
+          <div style={{ textAlign:"center", padding:"60px 20px", color:C.gray400 }}>
+            <div style={{fontSize:40,marginBottom:12}}>🔍</div>
+            <div style={{fontSize:16,fontWeight:500,color:C.gray600,marginBottom:6}}>No properties found</div>
+            <div style={{fontSize:13}}>Try adjusting your search or clearing filters</div>
+          </div>
+        ) : (
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))", gap:16 }}>
+            {filtered.map(p => (
+              <PropertyCard key={p.id} prop={p} favs={favs}
+                onView={prop  => { setDetailProp(prop);  setScreen("detail"); }}
+                onFav={toggleFav}
+                onAgentClick={agent => { setSelectedAgent && setSelectedAgent(agent); setScreen("agent-profile"); }} />
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── BUYER: Property Detail ─────────────────────────────────────
+function DetailScreen({ prop, onBack, favs, setFavs, setScreen, setDetailProp, setSelectedAgent }) {
+  const [showEnquiry,  setShowEnquiry]  = useState(false);
+  const [showVisit,    setShowVisit]    = useState(false);
+  const [activeImg,    setActiveImg]    = useState(0);
+  const [enquiryForm,  setEnquiryForm]  = useState({ name:"", phone:"", email:"", message:"" });
+  const [enquirySent,  setEnquirySent]  = useState(false);
+  const [copied,       setCopied]       = useState(false);
+
+  if (!prop) return (
+    <div style={{ padding:40, textAlign:"center" }}>
+      <div style={{fontSize:16,color:C.gray600}}>
+        No property selected.{" "}
+        <button onClick={onBack} style={{color:C.blue,background:"none",border:"none",cursor:"pointer",fontFamily:"inherit"}}>
+          Go back
+        </button>
+      </div>
+    </div>
+  );
+
+  const isFav = favs.includes(prop.id);
+  const relatedProps = PROPERTIES.filter(p => p.id !== prop.id && (p.city === prop.city || p.type === prop.type)).slice(0,3);
+
+  const handleEnquiry = () => {
+    if (!enquiryForm.name || !enquiryForm.phone) return;
+    setEnquirySent(true);
+    setTimeout(() => { setShowEnquiry(false); setEnquirySent(false); setEnquiryForm({name:"",phone:"",email:"",message:""}); }, 2200);
+  };
+
+  const handleShare = () => {
+    navigator.clipboard?.writeText(window.location.href).catch(()=>{});
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  // Gallery thumbnails — use icons since we have no real images
+  const mediaItems = [
+    {type:"photo", label:"Living Room", icon:"🛋"},
+    {type:"photo", label:"Bedroom",     icon:"🛏"},
+    {type:"photo", label:"Kitchen",     icon:"🍳"},
+    {type:"video", label:"Tour Video",  icon:"🎬"},
+    {type:"360",   label:"Virtual Tour",icon:"🌐"},
+  ];
+
+  return (
+    <div style={{ padding:24 }}>
+      {/* Breadcrumb */}
+      <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:16, fontSize:13, color:C.gray600 }}>
+        <button onClick={onBack} style={{color:C.blue,background:"none",border:"none",cursor:"pointer",fontFamily:"inherit",fontSize:13}}>
+          ← Search
+        </button>
+        <span>/</span>
+        <span>{prop.city}</span>
+        <span>/</span>
+        <span style={{color:C.gray800,fontWeight:500}}>{prop.title}</span>
+        <div style={{marginLeft:"auto",display:"flex",gap:8}}>
+          <button onClick={()=>setFavs(f=>f.includes(prop.id)?f.filter(x=>x!==prop.id):[...f,prop.id])}
+            style={{background:isFav?C.redLight:"none",border:`1px solid ${isFav?C.red:C.gray300}`,
+              borderRadius:8,cursor:"pointer",padding:"5px 10px",fontSize:13}}>
+            {isFav?"❤️ Saved":"🤍 Save"}
+          </button>
+          <button onClick={handleShare}
+            style={{background:copied?C.greenLight:"none",border:`1px solid ${copied?C.green:C.gray300}`,
+              borderRadius:8,cursor:"pointer",padding:"5px 10px",fontSize:13}}>
+            {copied?"✓ Copied":"📤 Share"}
+          </button>
+        </div>
+      </div>
+
+      {/* Main grid */}
+      <div style={{ display:"grid", gridTemplateColumns:"1fr 380px", gap:24 }}>
+
+        {/* ── LEFT: Gallery + Details ── */}
+        <div>
+          {/* Hero image */}
+          <div style={{ height:300, background:`linear-gradient(${prop.gradient})`,
+            borderRadius:12, display:"flex", alignItems:"center", justifyContent:"center",
+            marginBottom:10, position:"relative", overflow:"hidden" }}>
+            <span style={{fontSize:80,opacity:.35}}>{mediaItems[activeImg]?.icon || prop.icon}</span>
+            <div style={{position:"absolute",top:12,left:12,display:"flex",gap:6}}>
+              <Badge color={prop.purpose==="SALE"?"blue":"green"}>{prop.purpose==="SALE"?"For Sale":"For Rent"}</Badge>
+              {prop.featured && <span style={{background:C.amber,color:"#fff",fontSize:10,padding:"3px 8px",borderRadius:20,fontWeight:600}}>★ Featured</span>}
+            </div>
+            <div style={{position:"absolute",bottom:12,right:12,background:"rgba(0,0,0,.4)",
+              color:"#fff",borderRadius:8,padding:"4px 10px",fontSize:11}}>
+              {activeImg+1} / {mediaItems.length}
+            </div>
+          </div>
+
+          {/* Thumbnail strip */}
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(5,1fr)", gap:6, marginBottom:20 }}>
+            {mediaItems.map((m,i) => (
+              <div key={i} onClick={()=>setActiveImg(i)}
+                style={{ height:64, background:i===activeImg?C.blueLight:C.gray100,
+                  borderRadius:8, border:`2px solid ${i===activeImg?C.blue:C.gray200}`,
+                  display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",
+                  cursor:"pointer",gap:3,transition:"all .15s" }}>
+                <span style={{fontSize:18}}>{m.icon}</span>
+                <span style={{fontSize:9,color:i===activeImg?C.blue:C.gray600}}>{m.label}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* Title + price */}
+          <h1 style={{fontSize:22,fontWeight:700,color:C.gray800,margin:"0 0 4px"}}>{prop.title}</h1>
+          <div style={{color:C.gray600,fontSize:13,marginBottom:8}}>📍 {prop.locality}, {prop.city}, {prop.state}</div>
+          <div style={{display:"flex",alignItems:"baseline",gap:8,marginBottom:20}}>
+            <span style={{fontSize:30,fontWeight:800,color:C.blue}}>{prop.priceLabel}</span>
+            {prop.purpose==="RENT" && <span style={{fontSize:13,color:C.gray400}}>per month</span>}
+            {prop.area>0 && <span style={{fontSize:13,color:C.gray400}}>· ₹{Math.round((prop.price/prop.area)).toLocaleString()}/ft²</span>}
+          </div>
+
+          {/* Key stats */}
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:10, marginBottom:20 }}>
+            {[
+              prop.beds>0    && ["🛏","Bedrooms",    `${prop.beds} BHK`],
+              prop.baths>0   && ["🚿","Bathrooms",   `${prop.baths}`],
+              prop.area>0    && ["📐","Built-up Area",`${prop.area.toLocaleString()} ft²`],
+              prop.floor>0   && ["🏢","Floor",        `${prop.floor} / ${prop.totalFloors}`],
+              prop.buildYear>0 && ["🏗","Build Year", `${prop.buildYear}`],
+              prop.furnishing!=="N/A" && ["🛋","Furnishing", prop.furnishing],
+            ].filter(Boolean).map(([ic,l,v],i) => (
+              <div key={i} style={{background:C.gray100,borderRadius:10,padding:"12px 14px",border:`1px solid ${C.gray200}`}}>
+                <div style={{fontSize:18,marginBottom:4}}>{ic}</div>
+                <div style={{fontSize:10,color:C.gray600,marginBottom:2}}>{l}</div>
+                <div style={{fontSize:13,fontWeight:600,color:C.gray800}}>{v}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Description */}
+          <Card style={{marginBottom:16}}>
+            <h3 style={{fontSize:14,fontWeight:600,margin:"0 0 10px"}}>About this property</h3>
+            <p style={{fontSize:13,color:C.gray600,lineHeight:1.8,margin:0}}>{prop.description}</p>
+          </Card>
+
+          {/* Amenities */}
+          {prop.amenities?.length > 0 && (
+            <Card style={{marginBottom:16}}>
+              <h3 style={{fontSize:14,fontWeight:600,margin:"0 0 12px"}}>Amenities & Features</h3>
+              <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8}}>
+                {prop.amenities.map(a => (
+                  <div key={a} style={{display:"flex",alignItems:"center",gap:6,padding:"6px 0",
+                    borderBottom:`1px solid ${C.gray200}`,fontSize:12,color:C.gray700}}>
+                    <span style={{color:C.green,fontWeight:700}}>✓</span> {a}
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
+
+          {/* Map */}
+          <Card style={{marginBottom:16}}>
+            <h3 style={{fontSize:14,fontWeight:600,margin:"0 0 12px"}}>Location</h3>
+            <div style={{height:180,background:`linear-gradient(135deg,#E8F4F8,#D4EAD8)`,borderRadius:10,
+              display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",
+              gap:8,border:`1px solid ${C.gray300}`,color:C.gray600,position:"relative",overflow:"hidden"}}>
+              <svg style={{position:"absolute",inset:0}} width="100%" height="100%">
+                <line x1="0" y1="50%" x2="100%" y2="50%" stroke="#C8D8C8" strokeWidth="8"/>
+                <line x1="40%" y1="0" x2="40%" y2="100%" stroke="#C8D8C8" strokeWidth="6"/>
+              </svg>
+              <span style={{fontSize:32,zIndex:1}}>📍</span>
+              <span style={{fontSize:13,fontWeight:500,zIndex:1}}>{prop.locality}, {prop.city}</span>
+              <span style={{fontSize:11,color:C.gray400,zIndex:1}}>Click to open in Google Maps</span>
+            </div>
+            <div style={{display:"flex",gap:8,marginTop:10,flexWrap:"wrap"}}>
+              {["🏫 Schools nearby","🏥 Hospital 0.8km","🚇 Metro 1.2km","🛒 Mall 0.5km"].map(t=>(
+                <span key={t} style={{padding:"4px 10px",background:C.gray100,borderRadius:20,fontSize:11,color:C.gray600}}>{t}</span>
+              ))}
+            </div>
+          </Card>
+
+          {/* Related properties */}
+          {relatedProps.length > 0 && (
+            <div>
+              <h3 style={{fontSize:15,fontWeight:600,marginBottom:12}}>Similar Properties</h3>
+              <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12}}>
+                {relatedProps.map(p => (
+                  <PropertyCard key={p.id} prop={p} favs={favs}
+                    onView={rp=>{setDetailProp(rp);setActiveImg(0);window.scrollTo(0,0);}}
+                    onFav={id=>setFavs(f=>f.includes(id)?f.filter(x=>x!==id):[...f,id])}/>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* ── RIGHT: Sticky contact sidebar ── */}
+        <div style={{position:"sticky",top:70,alignSelf:"start",display:"flex",flexDirection:"column",gap:12}}>
+
+          {/* Price summary */}
+          <Card>
+            <div style={{fontSize:26,fontWeight:800,color:C.blue,marginBottom:2}}>{prop.priceLabel}</div>
+            {prop.purpose==="SALE" && (
+              <div style={{fontSize:12,color:C.gray400,marginBottom:12}}>
+                EMI from ₹{Math.round(prop.price*0.008/1000).toFixed(0)}K/month (20yr @ 8.5%)
+              </div>
+            )}
+            <div style={{background:C.gray100,borderRadius:8,padding:"10px 12px",marginBottom:14,fontSize:12,color:C.gray600}}>
+              <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
+                <span>Area</span><span style={{fontWeight:600,color:C.gray800}}>{prop.area.toLocaleString()} ft²</span>
+              </div>
+              <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
+                <span>Price/ft²</span><span style={{fontWeight:600,color:C.gray800}}>₹{prop.area>0?Math.round(prop.price/prop.area).toLocaleString():"—"}</span>
+              </div>
+              <div style={{display:"flex",justifyContent:"space-between"}}>
+                <span>Listed</span><span style={{fontWeight:600,color:C.gray800}}>3 days ago</span>
+              </div>
+            </div>
+
+            {/* CTA buttons */}
+            <div style={{display:"flex",flexDirection:"column",gap:8}}>
+              <Btn variant="primary" fullWidth icon="📅" onClick={()=>setShowVisit(true)}>
+                Schedule a Visit
+              </Btn>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                <Btn fullWidth icon="📞">Call Agent</Btn>
+                <Btn fullWidth icon="💬" style={{background:C.wa,color:"#fff",borderColor:C.wa}}>WhatsApp</Btn>
+              </div>
+              <Btn fullWidth onClick={()=>setShowEnquiry(true)}>✉️ Send Enquiry</Btn>
+            </div>
+          </Card>
+
+          {/* Agent card */}
+          <Card>
+            <div style={{fontSize:12,color:C.gray400,marginBottom:10,fontWeight:500,textTransform:"uppercase",letterSpacing:".05em"}}>Listed by</div>
+            <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:14}}>
+              <div style={{width:46,height:46,borderRadius:12,background:C.blueLight,
+                display:"flex",alignItems:"center",justifyContent:"center",
+                fontWeight:700,color:C.blue,fontSize:20,flexShrink:0}}>
+                {prop.agent.company[0]}
+              </div>
+              <div>
+                <div style={{fontSize:14,fontWeight:700,display:"flex",alignItems:"center",gap:4}}>
+                  {prop.agent.company}
+                  {prop.agent.verified && <span title="Verified Agent" style={{color:C.blue,fontSize:13}}>✓</span>}
+                </div>
+                <div style={{fontSize:12,color:C.gray600}}>{prop.agent.name}</div>
+                <div style={{fontSize:11,color:C.gray400}}>📍 {prop.agent.city}</div>
+              </div>
+            </div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:10,
+              background:C.gray100,borderRadius:8,padding:"10px"}}>
+              <div style={{textAlign:"center"}}>
+                <div style={{fontSize:16,fontWeight:700,color:C.blue}}>{PROPERTIES.filter(p=>p.agent.company===prop.agent.company).length}</div>
+                <div style={{fontSize:10,color:C.gray600}}>Listings</div>
+              </div>
+              <div style={{textAlign:"center"}}>
+                <div style={{fontSize:16,fontWeight:700,color:C.green}}>4.8 ★</div>
+                <div style={{fontSize:10,color:C.gray600}}>Rating</div>
+              </div>
+            </div>
+            <Btn fullWidth size="sm" onClick={()=>{
+              setSelectedAgent && setSelectedAgent(prop.agent);
+              setScreen("agent-profile");
+            }}>View Agent Profile →</Btn>
+          </Card>
+
+          {/* EMI calculator teaser */}
+          {prop.purpose==="SALE" && (
+            <Card>
+              <div style={{fontSize:13,fontWeight:600,marginBottom:10}}>🏦 EMI Calculator</div>
+              <div style={{fontSize:12,color:C.gray600,marginBottom:8}}>Estimated monthly payment</div>
+              {[
+                {y:10,rate:8.5,label:"10 years"},
+                {y:20,rate:8.5,label:"20 years"},
+                {y:30,rate:8.5,label:"30 years"},
+              ].map(({y,rate,label})=>{
+                const monthly = (prop.price*0.8*(rate/1200)*Math.pow(1+rate/1200,y*12))/(Math.pow(1+rate/1200,y*12)-1);
+                return (
+                  <div key={y} style={{display:"flex",justifyContent:"space-between",
+                    padding:"6px 0",borderBottom:`1px solid ${C.gray200}`,fontSize:12}}>
+                    <span style={{color:C.gray600}}>{label} @ {rate}%</span>
+                    <span style={{fontWeight:600}}>₹{(monthly/1000).toFixed(1)}K/mo</span>
+                  </div>
+                );
+              })}
+              <div style={{fontSize:10,color:C.gray400,marginTop:8}}>*Based on 80% loan on property value</div>
+            </Card>
+          )}
+
+          {/* Report listing */}
+          <div style={{textAlign:"center",fontSize:11,color:C.gray400}}>
+            <button style={{background:"none",border:"none",cursor:"pointer",color:C.gray400,fontFamily:"inherit",fontSize:11}}>
+              🚩 Report this listing
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* ── VISIT SCHEDULING MODAL ── */}
+      {showVisit && <VisitScheduleModal prop={prop} onClose={()=>setShowVisit(false)} />}
+
+      {/* ── ENQUIRY MODAL ── */}
+      {showEnquiry && (
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.5)",
+          display:"flex", alignItems:"center", justifyContent:"center", zIndex:1000, padding:20 }}>
+          <div style={{ background:C.white, borderRadius:16, padding:28, width:420, maxWidth:"100%" }}>
+            {enquirySent ? (
+              <div style={{ textAlign:"center", padding:"20px 0" }}>
+                <div style={{fontSize:56,marginBottom:12}}>✅</div>
+                <div style={{fontSize:20,fontWeight:700,marginBottom:6}}>Enquiry Sent!</div>
+                <div style={{color:C.gray600,fontSize:13}}>The agent will contact you within 24 hours.</div>
+              </div>
+            ) : (
+              <>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:18}}>
+                  <div>
+                    <div style={{fontSize:16,fontWeight:700}}>Contact Agent</div>
+                    <div style={{fontSize:12,color:C.gray600,marginTop:2}}>{prop.title}</div>
+                  </div>
+                  <button onClick={()=>setShowEnquiry(false)}
+                    style={{background:"none",border:"none",fontSize:20,cursor:"pointer",color:C.gray400}}>✕</button>
+                </div>
+                <Input label="Your name" placeholder="Amit Singh" required
+                  value={enquiryForm.name} onChange={e=>setEnquiryForm(f=>({...f,name:e.target.value}))}/>
+                <Input label="Mobile number" placeholder="9876543210" type="tel" required
+                  value={enquiryForm.phone} onChange={e=>setEnquiryForm(f=>({...f,phone:e.target.value}))}/>
+                <Input label="Email (optional)" placeholder="amit@email.com" type="email"
+                  value={enquiryForm.email} onChange={e=>setEnquiryForm(f=>({...f,email:e.target.value}))}/>
+                <Input label="Message" placeholder="I am interested in this property and would like more details…"
+                  rows={3} value={enquiryForm.message} onChange={e=>setEnquiryForm(f=>({...f,message:e.target.value}))}/>
+                <Btn variant="primary" fullWidth onClick={handleEnquiry}
+                  disabled={!enquiryForm.name||!enquiryForm.phone}>
+                  Send Enquiry
+                </Btn>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── BUYER: Favorites ──────────────────────────────────────────
+function FavoritesScreen({ favs, setFavs, setDetailProp, setScreen }) {
+  const favProps = PROPERTIES.filter(p => favs.includes(p.id));
+  return (
+    <div style={{ padding:24 }}>
+      <SectionHeader title={`Saved Properties (${favProps.length})`} />
+      {favProps.length === 0 ? (
+        <div style={{ textAlign:"center", padding:"60px 20px" }}>
+          <div style={{fontSize:48,marginBottom:12}}>🤍</div>
+          <div style={{fontSize:16,fontWeight:500,color:C.gray800,marginBottom:6}}>No saved properties</div>
+          <div style={{fontSize:13,color:C.gray600,marginBottom:16}}>Tap the heart icon on any listing to save it here</div>
+          <Btn variant="primary" onClick={()=>setScreen("search")}>Browse Properties</Btn>
+        </div>
+      ) : (
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))", gap:16 }}>
+          {favProps.map(p => (
+            <PropertyCard key={p.id} prop={p} favs={favs}
+              onView={prop => { setDetailProp(prop); setScreen("detail"); }}
+              onFav={id => setFavs(f => f.filter(x=>x!==id))} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── AGENT: Dashboard ──────────────────────────────────────────
+function AgentDashboard({ setScreen, currentUser }) {
+  // Derive live stats from mock data
+  const myProps     = PROPERTIES.filter(p => p.agent.company === "Sharma Homes");
+  const activeProps = myProps.filter(p => p.status === "APPROVED");
+  const totalViews  = myProps.reduce((s,p) => s + p.views, 0);
+  const newLeads    = LEADS.filter(l => l.status === "NEW").length;
+  const plan        = PLANS[1]; // Pro plan
+  const usedSlots   = 3;
+
+  return (
+    <div style={{ padding:24 }}>
+      <Alert type="warn">
+        You&apos;re on a <b>14-day free trial</b>.{" "}
+        <button onClick={()=>setScreen("subscription")}
+          style={{color:C.amber,background:"none",border:"none",cursor:"pointer",fontFamily:"inherit",fontWeight:600}}>
+          Upgrade now →
+        </button>
+      </Alert>
+
+      {/* Hero banner */}
+      <div style={{ background:`linear-gradient(135deg, ${C.blue}, ${C.blueDark})`,
+        borderRadius:14, padding:"22px 24px", color:"#fff", marginBottom:20,
+        display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+        <div>
+          <div style={{fontSize:20,fontWeight:700,marginBottom:4}}>Sharma Homes</div>
+          <div style={{fontSize:13,opacity:.8}}>
+            Pro Plan · Delhi · {myProps.length} / {plan.maxListings} listings · Renews 20 Apr
+          </div>
+          <div style={{marginTop:12,width:240}}>
+            <div style={{display:"flex",justifyContent:"space-between",fontSize:11,opacity:.7,marginBottom:3}}>
+              <span>Listing quota</span>
+              <span>{myProps.length} / {plan.maxListings} used</span>
+            </div>
+            <div style={{height:6,background:"rgba(255,255,255,.2)",borderRadius:3}}>
+              <div style={{height:"100%",width:`${(myProps.length/plan.maxListings)*100}%`,
+                background:"#fff",borderRadius:3,transition:"width .5s"}} />
+            </div>
+          </div>
+        </div>
+        <div style={{display:"flex",flexDirection:"column",gap:8,alignItems:"flex-end"}}>
+          <Btn style={{background:"rgba(255,255,255,.15)",color:"#fff",borderColor:"rgba(255,255,255,.3)"}}
+            onClick={()=>setScreen("subscription")}>Upgrade Plan</Btn>
+          <Btn style={{background:"rgba(255,255,255,.08)",color:"rgba(255,255,255,.8)",borderColor:"rgba(255,255,255,.2)"}}
+            size="sm" onClick={()=>setScreen("agent-my-profile")}>My Profile</Btn>
+        </div>
+      </div>
+
+      {/* Stats grid */}
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:12, marginBottom:20 }}>
+        <MetricCard label="Active Listings" value={activeProps.length} sub={`${plan.maxListings - myProps.length} slots remaining`} icon="🏠"/>
+        <MetricCard label="New Leads"       value={newLeads}           sub="This month"             icon="👤"/>
+        <MetricCard label="Total Views"     value={totalViews.toLocaleString()} sub="↑ 18% vs last mo"  icon="👁"/>
+        <MetricCard label="Featured Slots"  value={`${usedSlots} / ${plan.featured}`} sub="Slots active"  icon="⭐"/>
+      </div>
+
+      {/* Quick actions */}
+      <div style={{display:"flex",gap:8,marginBottom:20,flexWrap:"wrap"}}>
+        {[
+          {label:"+ Add Property",  screen:"add-prop",   icon:"🏠", primary:true},
+          {label:"Analytics",       screen:"analytics",  icon:"📊"},
+          {label:"Visits",          screen:"visits",     icon:"📅"},
+          {label:"Featured",        screen:"featured",   icon:"⭐"},
+          {label:"Notifications",   screen:"notifications",icon:"🔔"},
+        ].map(a=>(
+          <Btn key={a.screen} variant={a.primary?"primary":"outline"} onClick={()=>setScreen(a.screen)} icon={a.icon}>
+            {a.label}
+          </Btn>
+        ))}
+      </div>
+
+      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16 }}>
+        <Card>
+          <SectionHeader title="My Listings" action={
+            <Btn size="sm" onClick={()=>setScreen("my-props")}>View all ({myProps.length})</Btn>
+          }/>
+          {myProps.slice(0,4).map((p,i) => (
+            <div key={p.id} style={{ display:"flex", alignItems:"center", gap:10, padding:"10px 0",
+              borderBottom: i<myProps.slice(0,4).length-1?`1px solid ${C.gray200}`:"none" }}>
+              <div style={{ width:38,height:38,borderRadius:8,
+                background:`linear-gradient(135deg,${C.blueLight},#85B7EB)`,
+                display:"flex",alignItems:"center",justifyContent:"center",fontSize:18 }}>
+                {p.icon}
+              </div>
+              <div style={{flex:1,overflow:"hidden"}}>
+                <div style={{fontSize:13,fontWeight:500,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{p.title}</div>
+                <div style={{fontSize:11,color:C.gray600}}>{p.priceLabel}</div>
+              </div>
+              <Badge color={p.status==="APPROVED"?"green":"amber"} small>
+                {p.status.replace("_"," ")}
+              </Badge>
+              <span style={{fontSize:11,color:C.gray400}}>👁 {p.views}</span>
+            </div>
+          ))}
+          <Btn variant="primary" fullWidth style={{marginTop:12}} onClick={()=>setScreen("add-prop")}>
+            + Add New Property
+          </Btn>
+        </Card>
+
+        <Card>
+          <SectionHeader title="Recent Leads" action={
+            <Btn size="sm" onClick={()=>setScreen("leads")}>View all ({LEADS.length})</Btn>
+          }/>
+          <Table
+            cols={["Buyer","Property","Status"]}
+            rows={LEADS.slice(0,5).map(l => [
+              <div>
+                <div style={{fontWeight:500,fontSize:13}}>{l.name}</div>
+                <div style={{fontSize:11,color:C.gray600}}>{l.phone}</div>
+              </div>,
+              <span style={{fontSize:12,color:C.gray600}}>{l.property}</span>,
+              <Badge color={
+                l.status==="NEW"?"blue":l.status==="FOLLOW_UP"?"amber":
+                l.status==="CLOSED_WON"?"green":l.status==="VISIT_SCHEDULED"?"purple":"gray"
+              } small>{l.status.replace(/_/g," ")}</Badge>
+            ])}
+          />
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+// ─── AGENT: My Properties ──────────────────────────────────────
+function MyPropsScreen({ setScreen, setDetailProp, agentProps, setAgentProps, setEditingProp }) {
+  const [search, setSearch] = useState("");
+  const [statusF, setStatusF] = useState("ALL");
+  const [toast, setToast]   = useState(null);
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
+
+  const showToast = (msg, type="success") => { setToast({msg,type}); setTimeout(()=>setToast(null),3000); };
+
+  const handleDelete = (id) => {
+    setAgentProps(prev => prev.filter(p => p.id !== id));
+    setDeleteConfirm(null);
+    showToast("Property deleted successfully");
+  };
+
+  const toggleFeatured = (id) => {
+    const prop = agentProps.find(p=>p.id===id);
+    setAgentProps(prev => prev.map(p => p.id===id ? {...p, featured:!p.featured} : p));
+    showToast(prop?.featured ? "Removed from featured" : "Listed as featured ⭐");
+  };
+
+  const handleEdit = (prop) => {
+    setEditingProp && setEditingProp(prop);
+    setScreen("add-prop");
+  };
+
+  const handleAddNew = () => {
+    setEditingProp && setEditingProp(null); // ensure create mode, not stale edit
+    setScreen("add-prop");
+  };
+
+  const filtered = agentProps
+    .filter(p => statusF==="ALL" || p.status===statusF)
+    .filter(p => !search || p.title.toLowerCase().includes(search.toLowerCase()) || p.city.toLowerCase().includes(search.toLowerCase()));
+
+  const statusCounts = {
+    ALL: agentProps.length,
+    APPROVED: agentProps.filter(p=>p.status==="APPROVED").length,
+    PENDING_REVIEW: agentProps.filter(p=>p.status==="PENDING_REVIEW").length,
+    REJECTED: agentProps.filter(p=>p.status==="REJECTED").length,
+  };
+
+  return (
+    <div style={{ padding:24, position:"relative" }}>
+      {/* Toast */}
+      {toast && (
+        <div style={{ position:"fixed", top:68, right:24, zIndex:300,
+          background: toast.type==="warn" ? C.amberLight : C.greenLight,
+          color: toast.type==="warn" ? C.amber : C.green,
+          border:`1px solid ${toast.type==="warn" ? C.amber : C.green}`,
+          borderRadius:10, padding:"12px 20px", fontSize:13, fontWeight:500,
+          boxShadow:"0 4px 20px rgba(0,0,0,.12)" }}>
+          {toast.msg}
+        </div>
+      )}
+
+      {/* Delete confirmation modal */}
+      {deleteConfirm && (
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.5)",
+          display:"flex", alignItems:"center", justifyContent:"center", zIndex:200 }}>
+          <div style={{ background:C.white, borderRadius:14, padding:28, width:400, maxWidth:"90vw" }}>
+            <h3 style={{ margin:"0 0 10px", fontSize:16, fontWeight:700 }}>Delete Property?</h3>
+            <p style={{ fontSize:13, color:C.gray600, marginBottom:20 }}>
+              <b>{deleteConfirm.title}</b> will be permanently removed. This cannot be undone.
+            </p>
+            <div style={{ display:"flex", gap:8, justifyContent:"flex-end" }}>
+              <Btn onClick={()=>setDeleteConfirm(null)}>Cancel</Btn>
+              <Btn variant="danger" onClick={()=>handleDelete(deleteConfirm.id)}>Delete Permanently</Btn>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <SectionHeader
+        title={`My Listings (${agentProps.length})`}
+        action={<Btn variant="primary" onClick={handleAddNew}>+ Add Property</Btn>}
+      />
+
+      {/* Status tabs */}
+      <div style={{ display:"flex", gap:6, marginBottom:14, flexWrap:"wrap", alignItems:"center" }}>
+        {[["ALL","All"],["APPROVED","Live"],["PENDING_REVIEW","Pending Review"],["REJECTED","Rejected"]].map(([val,label])=>(
+          <button key={val} onClick={()=>setStatusF(val)}
+            style={{ padding:"5px 12px", borderRadius:20, fontSize:12, cursor:"pointer",
+              fontFamily:"inherit", border:`1px solid ${statusF===val?C.blue:C.gray300}`,
+              background:statusF===val?C.blue:"transparent", color:statusF===val?"#fff":C.gray600 }}>
+            {label} ({statusCounts[val]??0})
+          </button>
+        ))}
+        <input value={search} onChange={e=>setSearch(e.target.value)}
+          placeholder="Search by title or city…"
+          style={{ marginLeft:"auto", padding:"6px 12px", border:`1px solid ${C.gray300}`,
+            borderRadius:8, fontSize:13, fontFamily:"inherit", outline:"none", minWidth:200 }}/>
+      </div>
+
+      {filtered.length === 0 ? (
+        <div style={{ textAlign:"center", padding:"60px 20px", color:C.gray400 }}>
+          <div style={{ fontSize:40, marginBottom:12 }}>🏠</div>
+          <div style={{ fontSize:15, color:C.gray600, marginBottom:6 }}>No properties found</div>
+          <Btn variant="primary" onClick={handleAddNew}>+ Add Your First Property</Btn>
+        </div>
+      ) : (
+        <Card padding="0">
+          <Table
+            cols={["Property","Type","Price","Area","Views","Featured","Status","Actions"]}
+            rows={filtered.map(p => [
+              /* Property */
+              <div>
+                <div style={{ fontWeight:500, fontSize:13 }}>{p.title}</div>
+                <div style={{ fontSize:11, color:C.gray600 }}>{p.locality}, {p.city}</div>
+                {p.status==="REJECTED" && (
+                  <div style={{ fontSize:10, color:C.red, marginTop:2 }}>
+                    Rejected — edit and resubmit
+                  </div>
+                )}
+              </div>,
+              /* Type */
+              <Badge color="gray" small>{p.type}</Badge>,
+              /* Price */
+              <span style={{ fontWeight:500, color:C.blue }}>{p.priceLabel}</span>,
+              /* Area */
+              `${p.area?.toLocaleString()} ft²`,
+              /* Views */
+              <span style={{ color:C.gray600 }}>👁 {p.views}</span>,
+              /* Featured toggle */
+              <button onClick={()=>toggleFeatured(p.id)}
+                style={{ background:"none", border:"none", cursor:"pointer", fontSize:16,
+                  opacity:p.featured?1:.35 }} title={p.featured?"Remove featured":"Make featured"}>
+                ⭐
+              </button>,
+              /* Status */
+              <Badge color={p.status==="APPROVED"?"green":p.status==="PENDING_REVIEW"?"amber":"red"} small>
+                {p.status.replace(/_/g," ")}
+              </Badge>,
+              /* Actions */
+              <div style={{ display:"flex", gap:5 }}>
+                <Btn size="sm" icon="✏️" onClick={()=>handleEdit(p)}>Edit</Btn>
+                <Btn size="sm" onClick={()=>{ setDetailProp && setDetailProp(p); setScreen("detail"); }}>
+                  Preview
+                </Btn>
+                <Btn size="sm" style={{ color:C.red, borderColor:C.red }}
+                  onClick={()=>setDeleteConfirm(p)}>🗑</Btn>
+              </div>
+            ])}
+          />
+        </Card>
+      )}
+    </div>
+  );
+}
+
+// ─── AGENT: Add Property Wizard ─────────────────────────────────
+/**
+ * AddPropertyScreen — create or edit a property listing.
+ *
+ * Props:
+ *   editingProp     – property object to edit, or null for create mode
+ *   setEditingProp  – clears/sets the property being edited (Root App state)
+ *   agentProps      – the agent's current listings (Root App state)
+ *   setAgentProps   – setter for agentProps
+ *
+ * 5 steps: Basic Info → Location → Details → Media → Preview.
+ * The Preview step renders the listing exactly as a buyer would see it
+ * on the DetailScreen, so the agent can sanity-check before submitting.
+ */
+function AddPropertyScreen({ setScreen, editingProp, setEditingProp, agentProps, setAgentProps }) {
+  const isEditMode = !!editingProp;
+  const [step, setStep] = useState(0);
+  const steps = ["Basic Info","Location","Details","Media","Preview"];
+
+  // ── Controlled form state — pre-filled from editingProp if present ──
+  const [title,        setTitle]        = useState(editingProp?.title || "");
+  const [description,  setDescription]  = useState(editingProp?.description || "");
+  const [type,         setType]         = useState(editingProp?.type || "APARTMENT");
+  const [purpose,      setPurpose]      = useState(editingProp?.purpose || "SALE");
+  const [price,        setPrice]        = useState(editingProp?.price?.toString() || "");
+  const [address,      setAddress]      = useState(editingProp?.address || "");
+  const [locality,     setLocality]     = useState(editingProp?.locality || "");
+  const [city,         setCity]         = useState(editingProp?.city || "");
+  const [state,        setState]        = useState(editingProp?.state || "Delhi");
+  const [pincode,      setPincode]      = useState(editingProp?.pincode || "");
+  const [bedrooms,     setBedrooms]     = useState(editingProp?.beds?.toString() || "");
+  const [bathrooms,    setBathrooms]    = useState(editingProp?.baths?.toString() || "");
+  const [floor,        setFloor]        = useState(editingProp?.floor?.toString() || "");
+  const [totalFloors,  setTotalFloors]  = useState(editingProp?.totalFloors?.toString() || "");
+  const [area,         setArea]         = useState(editingProp?.area?.toString() || "");
+  const [buildYear,    setBuildYear]    = useState(editingProp?.buildYear?.toString() || "");
+  const [furnishing,   setFurnishing]   = useState(editingProp?.furnishing || "Unfurnished");
+  const [virtualTour,  setVirtualTour]  = useState(editingProp?.virtualTour || "");
+  const [amenities,    setAmenities]    = useState(editingProp?.amenities || []);
+  const [errors,       setErrors]       = useState({});
+  const [submitted,    setSubmitted]    = useState(false);
+
+  const TYPE_GRADIENTS = {
+    APARTMENT:"135deg,#B5D4F4,#85B7EB", VILLA:"135deg,#C0DD97,#639922",
+    PLOT:"135deg,#D3D1C7,#888780", COMMERCIAL:"135deg,#FAC775,#BA7517",
+    PENTHOUSE:"135deg,#CECBF6,#534AB7", INDEPENDENT_HOUSE:"135deg,#F5C4B3,#D85A30",
+  };
+  const TYPE_ICONS = {
+    APARTMENT:"🏢", VILLA:"🏡", PLOT:"🟫", COMMERCIAL:"🏢",
+    PENTHOUSE:"🏙️", INDEPENDENT_HOUSE:"🏠",
+  };
+
+  const SegBtn = ({ label, active, onClick }) => (
+    <button onClick={onClick} style={{ padding:"6px 14px", borderRadius:20,
+      border:`1px solid ${active?C.blue:C.gray300}`, background:active?C.blue:"transparent",
+      color:active?"#fff":C.gray600, fontSize:12, cursor:"pointer", fontFamily:"inherit",
+      transition:"all .15s", whiteSpace:"nowrap" }}>{label}</button>
+  );
+
+  // ── Per-step validation ─────────────────────────────────────
+  const validateStep = (s) => {
+    const e = {};
+    if (s === 0) {
+      if (title.trim().length < 10) e.title = "Title must be at least 10 characters";
+      if (description.trim().length < 20) e.description = "Description must be at least 20 characters";
+      if (!price || Number(price) <= 0) e.price = "Enter a valid price";
+    }
+    if (s === 1) {
+      if (!address.trim()) e.address = "Address is required";
+      if (!locality.trim()) e.locality = "Locality is required";
+      if (!city.trim()) e.city = "City is required";
+    }
+    if (s === 2) {
+      if (!area || Number(area) <= 0) e.area = "Enter a valid area";
+    }
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  };
+
+  const goNext = () => {
+    if (!validateStep(step)) return;
+    setStep(s => Math.min(s + 1, steps.length - 1));
+  };
+  const goBackStep = () => setStep(s => Math.max(s - 1, 0));
+
+  const handleCancel = () => {
+    setEditingProp && setEditingProp(null);
+    setScreen("my-props");
+  };
+
+  // ── Build the property object from form state ───────────────
+  const buildPropertyObject = () => {
+    const priceNum = Number(price) || 0;
+    const fmtPrice = priceNum >= 10000000 ? `₹${(priceNum/10000000).toFixed(2)} Cr`
+      : priceNum >= 100000 ? `₹${(priceNum/100000).toFixed(1)} L`
+      : purpose === "RENT" ? `₹${priceNum.toLocaleString()}/mo`
+      : `₹${priceNum.toLocaleString()}`;
+
+    return {
+      id: editingProp?.id || `p${Date.now()}`,
+      title: title.trim(),
+      description: description.trim(),
+      type, purpose,
+      price: priceNum,
+      priceLabel: fmtPrice,
+      address: address.trim(),
+      locality: locality.trim(),
+      city: city.trim(),
+      state,
+      pincode,
+      beds: Number(bedrooms) || 0,
+      baths: Number(bathrooms) || 0,
+      floor: Number(floor) || 0,
+      totalFloors: Number(totalFloors) || 0,
+      area: Number(area) || 0,
+      buildYear: Number(buildYear) || 0,
+      furnishing,
+      virtualTour,
+      amenities,
+      agent: editingProp?.agent || { id:"a1", name:"Deepak Sharma", company:"Sharma Homes", phone:"9876543210", verified:true, city:"Delhi" },
+      featured: editingProp?.featured || false,
+      status: "PENDING_REVIEW", // every create/edit goes back through admin review
+      views: editingProp?.views || 0,
+      gradient: TYPE_GRADIENTS[type] || TYPE_GRADIENTS.APARTMENT,
+      icon: TYPE_ICONS[type] || "🏠",
+    };
+  };
+
+  const handleSubmit = () => {
+    const newProp = buildPropertyObject();
+    setAgentProps(prev => {
+      if (isEditMode) {
+        return prev.map(p => p.id === newProp.id ? newProp : p);
+      }
+      return [newProp, ...prev];
+    });
+    setSubmitted(true);
+  };
+
+  const handleDone = () => {
+    setEditingProp && setEditingProp(null);
+    setScreen("my-props");
+  };
+
+  // ── Success screen after submit ──────────────────────────────
+  if (submitted) {
+    return (
+      <div style={{ padding:24, maxWidth:480, margin:"60px auto", textAlign:"center" }}>
+        <div style={{ fontSize:56, marginBottom:16 }}>✅</div>
+        <h2 style={{ fontSize:20, fontWeight:700, marginBottom:8 }}>
+          {isEditMode ? "Listing Updated!" : "Property Submitted!"}
+        </h2>
+        <p style={{ fontSize:13, color:C.gray600, marginBottom:24, lineHeight:1.6 }}>
+          {isEditMode
+            ? "Your changes have been saved and the listing has been resubmitted for admin review."
+            : "Your property has been submitted and is now pending admin review. You'll be notified once it's approved and live."}
+        </p>
+        <Btn variant="primary" fullWidth onClick={handleDone}>Back to My Listings</Btn>
+      </div>
+    );
+  }
+
+  // ── Step content ──────────────────────────────────────────────
+  const stepContent = [
+    // Step 0: Basic Info
+    <div key="basic">
+      <Input label="Property title" placeholder="e.g. Spacious 3 BHK Apartment in South Delhi" required
+        value={title} onChange={e=>setTitle(e.target.value)} />
+      {errors.title && <div style={{color:C.red,fontSize:11,marginTop:-10,marginBottom:12}}>{errors.title}</div>}
+
+      <Input label="Description" placeholder="Describe key features, surroundings, connectivity…" rows={4} required
+        value={description} onChange={e=>setDescription(e.target.value)} />
+      {errors.description && <div style={{color:C.red,fontSize:11,marginTop:-10,marginBottom:12}}>{errors.description}</div>}
+
+      <div style={{marginBottom:14}}>
+        <label style={{display:"block",fontSize:12,fontWeight:500,color:C.gray600,marginBottom:6}}>Property type</label>
+        <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+          {["APARTMENT","VILLA","PLOT","COMMERCIAL","PENTHOUSE","INDEPENDENT_HOUSE"].map(t =>
+            <SegBtn key={t} label={t.replace("_"," ").charAt(0)+t.replace("_"," ").slice(1).toLowerCase()}
+              active={type===t} onClick={()=>setType(t)} />)}
+        </div>
+      </div>
+
+      <div style={{marginBottom:14}}>
+        <label style={{display:"block",fontSize:12,fontWeight:500,color:C.gray600,marginBottom:6}}>Purpose</label>
+        <div style={{display:"flex",gap:8}}>
+          {["SALE","RENT","LEASE"].map(p =>
+            <button key={p} onClick={()=>setPurpose(p)} style={{ flex:1, padding:"9px 0",
+              border:`1px solid ${purpose===p?C.blue:C.gray300}`, borderRadius:8,
+              background:purpose===p?C.blueLight:"transparent", color:purpose===p?C.blue:C.gray600,
+              cursor:"pointer", fontFamily:"inherit", fontWeight:500, fontSize:13 }}>
+              {p==="SALE"?"🏷 For Sale":p==="RENT"?"🔑 For Rent":"📄 Lease"}
+            </button>)}
+        </div>
+      </div>
+
+      <Input label="Price (₹)" type="number" placeholder={purpose==="SALE"?"e.g. 8500000":"e.g. 35000 per month"} required
+        value={price} onChange={e=>setPrice(e.target.value)} />
+      {errors.price && <div style={{color:C.red,fontSize:11,marginTop:-10}}>{errors.price}</div>}
+    </div>,
+
+    // Step 1: Location
+    <div key="location">
+      <Input label="Full address" placeholder="House no., Street, Colony…" required
+        value={address} onChange={e=>setAddress(e.target.value)} />
+      {errors.address && <div style={{color:C.red,fontSize:11,marginTop:-10,marginBottom:12}}>{errors.address}</div>}
+
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+        <div>
+          <Input label="Locality / Area" placeholder="e.g. Vasant Kunj" required
+            value={locality} onChange={e=>setLocality(e.target.value)} />
+          {errors.locality && <div style={{color:C.red,fontSize:11,marginTop:-10}}>{errors.locality}</div>}
+        </div>
+        <div>
+          <Input label="City" placeholder="e.g. Delhi" required
+            value={city} onChange={e=>setCity(e.target.value)} />
+          {errors.city && <div style={{color:C.red,fontSize:11,marginTop:-10}}>{errors.city}</div>}
+        </div>
+        <Input label="State" options={["Delhi","Maharashtra","Karnataka","Uttar Pradesh","Tamil Nadu","Gujarat","Rajasthan","West Bengal"]}
+          value={state} onChange={e=>setState(e.target.value)} />
+        <Input label="PIN Code" type="number" placeholder="110001"
+          value={pincode} onChange={e=>setPincode(e.target.value)} />
+      </div>
+      <div style={{ height:160, background:C.gray100, borderRadius:10, marginTop:4,
+        display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",
+        gap:8, border:`1px dashed ${C.gray300}`, color:C.gray600, cursor:"pointer" }}>
+        <span style={{fontSize:28}}>📍</span>
+        <span style={{fontSize:13,fontWeight:500}}>Click to pin location on Google Maps</span>
+        <span style={{fontSize:11,color:C.gray400}}>Latitude & Longitude will be auto-filled</span>
+      </div>
+    </div>,
+
+    // Step 2: Details
+    <div key="details">
+      <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12}}>
+        <Input label="Bedrooms" type="number" placeholder="3" value={bedrooms} onChange={e=>setBedrooms(e.target.value)} />
+        <Input label="Bathrooms" type="number" placeholder="2" value={bathrooms} onChange={e=>setBathrooms(e.target.value)} />
+        <Input label="Floor No." type="number" placeholder="4" value={floor} onChange={e=>setFloor(e.target.value)} />
+        <Input label="Total Floors" type="number" placeholder="12" value={totalFloors} onChange={e=>setTotalFloors(e.target.value)} />
+        <div>
+          <Input label="Area (sq ft)" type="number" placeholder="1450" required value={area} onChange={e=>setArea(e.target.value)} />
+          {errors.area && <div style={{color:C.red,fontSize:11,marginTop:-10}}>{errors.area}</div>}
+        </div>
+        <Input label="Build Year" type="number" placeholder="2019" value={buildYear} onChange={e=>setBuildYear(e.target.value)} />
+      </div>
+      <div style={{marginBottom:14}}>
+        <label style={{display:"block",fontSize:12,fontWeight:500,color:C.gray600,marginBottom:6}}>Furnishing</label>
+        <div style={{display:"flex",gap:8}}>
+          {["Unfurnished","Semi-Furnished","Fully Furnished"].map(f =>
+            <SegBtn key={f} label={f} active={furnishing===f} onClick={()=>setFurnishing(f)} />)}
+        </div>
+      </div>
+      <Input label="Virtual Tour URL (optional)" placeholder="https://matterport.com/…"
+        value={virtualTour} onChange={e=>setVirtualTour(e.target.value)} />
+      <div>
+        <label style={{display:"block",fontSize:12,fontWeight:500,color:C.gray600,marginBottom:8}}>Amenities</label>
+        <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+          {["Swimming Pool","Gym","Parking","Lift","Power Backup","Security","Garden","Club House","Play Area","Intercom","Air Conditioning","Internet"].map(a => {
+            const sel = amenities.includes(a);
+            return <button key={a} onClick={()=>setAmenities(x=>sel?x.filter(i=>i!==a):[...x,a])}
+              style={{ padding:"5px 12px", borderRadius:20, border:`1px solid ${sel?C.blue:C.gray300}`,
+                background:sel?C.blueLight:"transparent", color:sel?C.blue:C.gray600,
+                fontSize:12, cursor:"pointer", fontFamily:"inherit" }}>
+              {sel?"✓ ":""}{a}
+            </button>;
+          })}
+        </div>
+      </div>
+    </div>,
+
+    // Step 3: Media
+    <div key="media">
+      <div style={{fontSize:14,fontWeight:500,marginBottom:4}}>Upload images</div>
+      <div style={{fontSize:12,color:C.gray600,marginBottom:16}}>First image = cover photo. Max 20 images, 10 MB each.</div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8,marginBottom:20}}>
+        {["Cover","Room","Kitchen","Bathroom","View","Exterior","Floor Plan","+"].map((l,i) => (
+          <div key={i} style={{ height:80, borderRadius:8, cursor:"pointer",
+            background: i===0?`linear-gradient(${TYPE_GRADIENTS[type]||TYPE_GRADIENTS.APARTMENT})`:i===7?"transparent":C.gray100,
+            border: i===7?`1px dashed ${C.gray300}`:`1px solid ${C.gray200}`,
+            display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",
+            gap:3, position:"relative" }}>
+            <span style={{fontSize:i===7?22:18}}>{i===7?"➕":i===0?TYPE_ICONS[type]:"📷"}</span>
+            <span style={{fontSize:10,color:C.gray400}}>{l}</span>
+            {i===0 && <span style={{position:"absolute",top:4,left:4,background:C.blue,color:"#fff",
+              fontSize:9,padding:"1px 6px",borderRadius:4}}>Cover</span>}
+          </div>
+        ))}
+      </div>
+      <div style={{background:C.gray100,borderRadius:10,padding:14}}>
+        <div style={{fontSize:13,fontWeight:500,marginBottom:8}}>📸 Tips for great listings</div>
+        {["Use well-lit, high-resolution photos","Include exterior, all rooms, kitchen & bathrooms","Add floor plan image for 40% more enquiries","Capture views from windows if applicable"].map((t,i) =>
+          <div key={i} style={{fontSize:12,color:C.gray600,marginBottom:4}}>• {t}</div>)}
+      </div>
+    </div>,
+
+    // Step 4: Preview — renders exactly as buyers will see it
+    <PropertyPreviewPane key="preview" property={buildPropertyObject()} />,
+  ];
+
+  return (
+    <div style={{ padding:24, maxWidth:step===4?900:760, margin:"0 auto", transition:"max-width .2s" }}>
+      <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:24}}>
+        <button onClick={handleCancel}
+          style={{background:"none",border:"none",cursor:"pointer",color:C.blue,fontSize:13,fontFamily:"inherit"}}>
+          ← Cancel
+        </button>
+        <h2 style={{fontSize:18,fontWeight:600,margin:0}}>
+          {isEditMode ? `Edit: ${editingProp.title}` : "Add New Property"}
+        </h2>
+        {isEditMode && <Badge color="amber">Resubmits for review</Badge>}
+      </div>
+
+      {/* Step indicator */}
+      <div style={{display:"flex",alignItems:"center",marginBottom:24}}>
+        {steps.map((s,i) => (
+          <div key={i} style={{display:"flex",alignItems:"center",flex:i<steps.length-1?1:"auto"}}>
+            <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:4,cursor: i<step ? "pointer":"default"}}
+              onClick={() => { if (i < step) setStep(i); }}>
+              <div style={{ width:30,height:30,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",
+                background:i<step?C.green:i===step?C.blue:C.gray200,
+                color:i<=step?"#fff":C.gray400,fontSize:13,fontWeight:600 }}>
+                {i<step ? "✓" : i+1}
+              </div>
+              <span style={{fontSize:11,color:i===step?C.blue:C.gray600,fontWeight:i===step?600:400,whiteSpace:"nowrap"}}>{s}</span>
+            </div>
+            {i<steps.length-1 && <div style={{flex:1,height:2,background:i<step?C.green:C.gray200,margin:"0 8px 16px"}} />}
+          </div>
+        ))}
+      </div>
+
+      <Card>
+        {stepContent[step]}
+        <div style={{display:"flex",justifyContent:"space-between",gap:8,paddingTop:14,borderTop:`1px solid ${C.gray200}`,marginTop:14}}>
+          <div>
+            {step > 0 && <Btn onClick={goBackStep}>← Back</Btn>}
+          </div>
+          <div style={{display:"flex",gap:8}}>
+            {step < steps.length - 1 ? (
+              <Btn variant="primary" onClick={goNext}>
+                {step === steps.length - 2 ? "Preview Listing →" : "Continue →"}
+              </Btn>
+            ) : (
+              <Btn variant="primary" onClick={handleSubmit}>
+                {isEditMode ? "Save & Resubmit for Review" : "Submit for Review"}
+              </Btn>
+            )}
+          </div>
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+/**
+ * PropertyPreviewPane — renders a property using the same visual language
+ * as the public DetailScreen, so agents can verify their listing before
+ * submitting. Read-only; no contact/visit actions since it isn't live yet.
+ */
+function PropertyPreviewPane({ property: p }) {
+  return (
+    <div>
+      <div style={{ background:C.amberLight, color:C.amber, borderRadius:8, padding:"8px 14px",
+        fontSize:12, marginBottom:16, display:"flex", alignItems:"center", gap:6 }}>
+        👁 This is a preview — buyers will see this once approved by the admin team.
+      </div>
+
+      <div style={{ display:"grid", gridTemplateColumns:"1fr 320px", gap:20 }}>
+        {/* Left: media + details */}
+        <div>
+          <div style={{ height:200, background:`linear-gradient(${p.gradient})`,
+            borderRadius:12, display:"flex", alignItems:"center", justifyContent:"center", marginBottom:14 }}>
+            <span style={{ fontSize:60, opacity:.4 }}>{p.icon}</span>
+          </div>
+
+          <div style={{ display:"flex", gap:6, marginBottom:8 }}>
+            <Badge color={p.purpose==="SALE"?"blue":"green"}>{p.purpose==="SALE"?"For Sale":p.purpose==="RENT"?"For Rent":"Lease"}</Badge>
+            <Badge color="gray">{p.type.replace("_"," ")}</Badge>
+          </div>
+
+          <h2 style={{ fontSize:19, fontWeight:700, margin:"0 0 4px" }}>{p.title || "Untitled property"}</h2>
+          <div style={{ color:C.gray600, fontSize:13, marginBottom:10 }}>
+            📍 {[p.locality, p.city, p.state].filter(Boolean).join(", ") || "Location not set"}
+          </div>
+          <div style={{ fontSize:24, fontWeight:700, color:C.blue, marginBottom:16 }}>
+            {p.priceLabel || "₹—"}
+          </div>
+
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:8, marginBottom:16 }}>
+            {[
+              p.beds>0    && ["🛏","Bedrooms",`${p.beds} BHK`],
+              p.baths>0   && ["🚿","Bathrooms",p.baths],
+              p.area>0    && ["📐","Area",`${p.area.toLocaleString()} ft²`],
+              p.floor>0   && ["🏢","Floor",`${p.floor} / ${p.totalFloors||"-"}`],
+              p.buildYear>0 && ["🏗","Build Year",p.buildYear],
+              p.furnishing && ["🛋","Furnishing",p.furnishing],
+            ].filter(Boolean).map(([ic,l,v],i) => (
+              <div key={i} style={{ background:C.gray100, borderRadius:8, padding:"10px 12px" }}>
+                <div style={{fontSize:11,color:C.gray600}}>{ic} {l}</div>
+                <div style={{fontSize:13,fontWeight:600,color:C.gray800}}>{v}</div>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ marginBottom:14 }}>
+            <div style={{ fontSize:13, fontWeight:600, marginBottom:6 }}>Description</div>
+            <p style={{ fontSize:13, color:C.gray600, lineHeight:1.7, margin:0 }}>
+              {p.description || <span style={{color:C.gray400, fontStyle:"italic"}}>No description provided</span>}
+            </p>
+          </div>
+
+          {p.amenities?.length > 0 && (
+            <div>
+              <div style={{ fontSize:13, fontWeight:600, marginBottom:8 }}>Amenities</div>
+              <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
+                {p.amenities.map(a => (
+                  <span key={a} style={{ padding:"3px 10px", background:C.gray100, borderRadius:20, fontSize:11, color:C.gray600 }}>
+                    ✓ {a}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Right: sidebar mock (disabled — not yet live) */}
+        <div>
+          <Card style={{ marginBottom:12 }}>
+            <div style={{ fontSize:22, fontWeight:700, color:C.blue, marginBottom:10 }}>{p.priceLabel || "₹—"}</div>
+            <div style={{ display:"flex", flexDirection:"column", gap:8, opacity:.5, pointerEvents:"none" }}>
+              <Btn variant="primary" fullWidth icon="📅">Schedule a Visit</Btn>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                <Btn fullWidth icon="📞">Call Agent</Btn>
+                <Btn fullWidth icon="💬">WhatsApp</Btn>
+              </div>
+            </div>
+            <div style={{ fontSize:10, color:C.gray400, marginTop:8, textAlign:"center" }}>
+              Contact actions activate once listing is approved
+            </div>
+          </Card>
+          <Card>
+            <div style={{ fontSize:12, color:C.gray400, marginBottom:8, fontWeight:500 }}>LISTED BY</div>
+            <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+              <div style={{ width:40, height:40, borderRadius:10, background:C.blueLight,
+                display:"flex", alignItems:"center", justifyContent:"center", fontWeight:700, color:C.blue }}>
+                {p.agent?.company?.[0] || "A"}
+              </div>
+              <div>
+                <div style={{ fontSize:13, fontWeight:600 }}>{p.agent?.company}</div>
+                <div style={{ fontSize:11, color:C.gray600 }}>{p.agent?.name}</div>
+              </div>
+            </div>
+          </Card>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── AGENT: Leads ─────────────────────────────────────────────
+function LeadsScreen({ setScreen }) {
+  // Use mutable local state so status updates are reflected immediately
+  const [leads,    setLeads]    = useState(() => LEADS.map(l => ({...l})));
+  const [filter,   setFilter]   = useState("ALL");
+  const [selected, setSelected] = useState(null);
+  const [toast,    setToast]    = useState(null);
+
+  const statuses = ["ALL","NEW","FOLLOW_UP","VISIT_SCHEDULED","NEGOTIATION","CLOSED_WON","CLOSED_LOST"];
+  const statusColor = s => ({NEW:"blue",FOLLOW_UP:"amber",VISIT_SCHEDULED:"purple",NEGOTIATION:"purple",CLOSED_WON:"green",CLOSED_LOST:"red"}[s]||"gray");
+  const filtered = filter === "ALL" ? leads : leads.filter(l=>l.status===filter);
+
+  const showToast = (msg) => { setToast(msg); setTimeout(()=>setToast(null),2500); };
+
+  const updateLeadStatus = (id, status) => {
+    setLeads(prev => prev.map(l => l.id===id ? {...l,status} : l));
+    if (selected?.id === id) setSelected(s => ({...s,status}));
+    showToast(`Lead marked as ${status.replace(/_/g," ")}`);
+  };
+
+  return (
+    <div style={{padding:24, position:"relative"}}>
+      {/* Toast */}
+      {toast && (
+        <div style={{position:"fixed",top:68,right:24,zIndex:300,
+          background:C.greenLight,color:C.green,border:`1px solid ${C.green}`,
+          borderRadius:10,padding:"12px 20px",fontSize:13,fontWeight:500,
+          boxShadow:"0 4px 20px rgba(0,0,0,.12)"}}>
+          ✓ {toast}
+        </div>
+      )}
+
+      <SectionHeader title="Lead Pipeline" action={
+        <div style={{display:"flex",gap:12,alignItems:"center",fontSize:12,color:C.gray600}}>
+          <span>{leads.length} leads total</span>
+          <span style={{color:C.blue,fontWeight:600}}>{leads.filter(l=>l.status==="NEW").length} new</span>
+          <span style={{color:C.green}}>{leads.filter(l=>l.status==="CLOSED_WON").length} closed won</span>
+        </div>
+      } />
+
+      {/* Status filter tabs */}
+      <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:16}}>
+        {statuses.map(s => (
+          <button key={s} onClick={()=>setFilter(s)}
+            style={{ padding:"5px 12px", borderRadius:20, border:`1px solid ${filter===s?C.blue:C.gray300}`,
+              background:filter===s?C.blue:"transparent", color:filter===s?"#fff":C.gray600,
+              fontSize:12, cursor:"pointer", fontFamily:"inherit" }}>
+            {s.replace(/_/g," ")}
+            {s!=="ALL" && (
+              <span style={{marginLeft:4,opacity:.75}}>
+                ({leads.filter(l=>l.status===s).length})
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
+
+      <div style={{display:"grid",gridTemplateColumns:selected?"1fr 380px":"1fr",gap:16}}>
+        {/* Lead table */}
+        <Card padding="0">
+          <Table
+            cols={["Buyer","Property","Source","Date","Status","Actions"]}
+            rows={filtered.map(l => [
+              <div>
+                <div style={{fontWeight:500,fontSize:13}}>{l.name}</div>
+                <div style={{fontSize:11,color:C.gray600}}>{l.phone}</div>
+              </div>,
+              <span style={{fontSize:12}}>{l.property}</span>,
+              <Badge color={l.source==="WHATSAPP"?"green":l.source==="CALL"?"amber":"blue"} small>
+                {l.source}
+              </Badge>,
+              <span style={{fontSize:11,color:C.gray600}}>{l.date}</span>,
+              <Badge color={statusColor(l.status)} small>{l.status.replace(/_/g," ")}</Badge>,
+              <div style={{display:"flex",gap:5}}>
+                <Btn size="sm" onClick={()=>setSelected(selected?.id===l.id?null:l)}>
+                  {selected?.id===l.id?"Close":"View"}
+                </Btn>
+                <Btn size="sm" title="Call">📞</Btn>
+                <Btn size="sm" style={{background:C.wa,color:"#fff",borderColor:C.wa,padding:"6px 8px"}} title="WhatsApp">💬</Btn>
+              </div>
+            ])}
+          />
+          {filtered.length===0 && (
+            <div style={{textAlign:"center",padding:"40px 20px",color:C.gray400}}>
+              <div style={{fontSize:32,marginBottom:10}}>📭</div>
+              <div style={{fontSize:14,color:C.gray600}}>No leads in this status</div>
+            </div>
+          )}
+        </Card>
+
+        {/* Lead detail panel */}
+        {selected && (
+          <Card style={{alignSelf:"start",position:"sticky",top:70}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+              <div style={{fontWeight:700,fontSize:15}}>Lead Detail</div>
+              <button onClick={()=>setSelected(null)}
+                style={{background:"none",border:"none",fontSize:18,cursor:"pointer",color:C.gray400}}>✕</button>
+            </div>
+
+            {/* Buyer avatar + info */}
+            <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14}}>
+              <div style={{width:44,height:44,borderRadius:"50%",background:C.blueLight,
+                display:"flex",alignItems:"center",justifyContent:"center",
+                fontWeight:700,color:C.blue,fontSize:18}}>
+                {selected.name[0]}
+              </div>
+              <div>
+                <div style={{fontWeight:700,fontSize:15}}>{selected.name}</div>
+                <div style={{fontSize:12,color:C.gray600}}>{selected.phone}</div>
+                {selected.email && <div style={{fontSize:11,color:C.gray400}}>{selected.email}</div>}
+              </div>
+            </div>
+
+            {/* Message */}
+            <div style={{background:C.gray100,borderRadius:8,padding:"10px 12px",
+              marginBottom:14,fontSize:12,color:C.gray600,lineHeight:1.6,
+              borderLeft:`3px solid ${C.blue}`}}>
+              "{selected.message}"
+            </div>
+
+            {/* Details */}
+            {[
+              ["🏠 Property", selected.property],
+              ["📡 Source",   selected.source],
+              ["📅 Date",     selected.date],
+            ].map(([l,v])=>(
+              <div key={l} style={{display:"flex",justifyContent:"space-between",
+                fontSize:13,padding:"7px 0",borderBottom:`1px solid ${C.gray200}`}}>
+                <span style={{color:C.gray600}}>{l}</span>
+                <span style={{fontWeight:500}}>{v}</span>
+              </div>
+            ))}
+
+            {/* Current status */}
+            <div style={{display:"flex",justifyContent:"space-between",
+              fontSize:13,padding:"7px 0",marginBottom:14}}>
+              <span style={{color:C.gray600}}>Current Status</span>
+              <Badge color={statusColor(selected.status)}>{selected.status.replace(/_/g," ")}</Badge>
+            </div>
+
+            {/* Status update buttons */}
+            <div style={{marginBottom:14}}>
+              <div style={{fontSize:12,fontWeight:600,marginBottom:8,color:C.gray700}}>Move to:</div>
+              <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
+                {["NEW","CONTACTED","FOLLOW_UP","VISIT_SCHEDULED","NEGOTIATION","CLOSED_WON","CLOSED_LOST"]
+                  .filter(s => s !== selected.status)
+                  .map(s => (
+                    <button key={s} onClick={() => {
+                        setSelected(prev => ({...prev, status:s}));
+                        updateLeadStatus(selected.id, s);
+                      }}
+                      style={{padding:"5px 10px",borderRadius:20,fontSize:11,cursor:"pointer",
+                        fontFamily:"inherit",border:`1px solid ${C.gray300}`,
+                        background:"transparent",color:C.gray700,transition:"all .15s"}}
+                      onMouseEnter={e=>{e.currentTarget.style.background=C.blueLight;e.currentTarget.style.color=C.blue;e.currentTarget.style.borderColor=C.blue;}}
+                      onMouseLeave={e=>{e.currentTarget.style.background="transparent";e.currentTarget.style.color=C.gray700;e.currentTarget.style.borderColor=C.gray300;}}>
+                      {s.replace(/_/g," ")}
+                    </button>
+                  ))}
+              </div>
+            </div>
+
+            {/* Quick actions */}
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+              <Btn icon="📞" fullWidth>Call Now</Btn>
+              <Btn icon="💬" fullWidth style={{background:C.wa,color:"#fff",borderColor:C.wa}}>WhatsApp</Btn>
+            </div>
+            <div style={{marginTop:8}}>
+              <Input label="Add note" placeholder="Internal note about this lead…" rows={2} />
+              <Btn variant="primary" fullWidth onClick={()=>showToast("Note saved")}>Save Note</Btn>
+            </div>
+          </Card>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── AGENT: Subscription ───────────────────────────────────────
+function SubscriptionScreen({ setScreen }) {
+  const [yearly, setYearly] = useState(false);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [subStatus, setSubStatus] = useState("Active"); // Active | Cancelled
+  const [toast, setToast] = useState(null);
+
+  const showToast = (msg) => { setToast(msg); setTimeout(()=>setToast(null), 2500); };
+
+  const handleCancelConfirm = () => {
+    setSubStatus("Cancelled");
+    setShowCancelConfirm(false);
+    showToast("Subscription cancelled — access continues until 20 Apr 2024");
+  };
+
+  const handleDownloadInvoice = () => {
+    showToast("Downloading latest invoice (INV-2024-000342)…");
+  };
+
+  const handleSelectPlan = (planName) => {
+    if (planName === "Pro" && subStatus === "Active") return; // already on this plan
+    showToast(`Razorpay checkout opened for ${planName} plan (${yearly ? "Annual" : "Monthly"})`);
+  };
+
+  return (
+    <div style={{padding:24, position:"relative"}}>
+      {/* Toast */}
+      {toast && (
+        <div style={{position:"fixed",top:68,right:24,zIndex:300,
+          background:C.greenLight,color:C.green,border:`1px solid ${C.green}`,
+          borderRadius:10,padding:"12px 20px",fontSize:13,fontWeight:500,
+          boxShadow:"0 4px 20px rgba(0,0,0,.12)"}}>
+          ✓ {toast}
+        </div>
+      )}
+
+      {/* Cancel confirmation modal */}
+      {showCancelConfirm && (
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.5)",
+          display:"flex",alignItems:"center",justifyContent:"center",zIndex:200}}>
+          <div style={{background:C.white,borderRadius:14,padding:28,width:420,maxWidth:"90vw"}}>
+            <h3 style={{margin:"0 0 8px",fontSize:16,fontWeight:700}}>Cancel your Pro subscription?</h3>
+            <p style={{fontSize:13,color:C.gray600,marginBottom:16,lineHeight:1.6}}>
+              You'll keep Pro features until <b>20 Apr 2024</b>, after which your account
+              will revert to the free tier with a 5-listing limit. This cannot be undone automatically.
+            </p>
+            <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}>
+              <Btn onClick={()=>setShowCancelConfirm(false)}>Keep Subscription</Btn>
+              <Btn variant="danger" onClick={handleCancelConfirm}>Yes, Cancel Plan</Btn>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <SectionHeader title="Subscription & Plans"
+        action={setScreen && <Btn size="sm" onClick={()=>setScreen("agent-dash")}>← Dashboard</Btn>} />
+
+      {/* Current plan */}
+      <div style={{background:`linear-gradient(135deg,${C.blue},${C.blueDark})`,borderRadius:14,padding:22,color:"#fff",marginBottom:24}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:16}}>
+          <div>
+            <div style={{fontSize:11,opacity:.7,marginBottom:3}}>Current Plan</div>
+            <div style={{fontSize:24,fontWeight:700}}>Pro</div>
+            <div style={{fontSize:12,opacity:.8,marginTop:3}}>
+              ₹2,999/month + ₹540 GST · {subStatus==="Cancelled" ? "Access ends 20 Apr 2024" : "Auto-renews 20 Apr 2024"}
+            </div>
+          </div>
+          <span style={{background:subStatus==="Cancelled"?"rgba(255,80,80,.25)":"rgba(255,255,255,.2)",
+            color:"#fff",padding:"4px 12px",borderRadius:20,fontSize:12,fontWeight:600}}>
+            {subStatus==="Cancelled" ? "Cancelling" : "Active"}
+          </span>
+        </div>
+        <div style={{marginBottom:10}}>
+          <div style={{display:"flex",justifyContent:"space-between",fontSize:12,opacity:.8,marginBottom:4}}>
+            <span>Listings</span><span>58 / 100 used</span>
+          </div>
+          <div style={{height:6,background:"rgba(255,255,255,.2)",borderRadius:3}}>
+            <div style={{height:"100%",width:"58%",background:"#fff",borderRadius:3}} />
+          </div>
+        </div>
+        <div>
+          <div style={{display:"flex",justifyContent:"space-between",fontSize:12,opacity:.8,marginBottom:4}}>
+            <span>Featured Slots</span><span>3 / 5 used</span>
+          </div>
+          <div style={{height:6,background:"rgba(255,255,255,.2)",borderRadius:3}}>
+            <div style={{height:"100%",width:"60%",background:"#fff",borderRadius:3}} />
+          </div>
+        </div>
+        <div style={{display:"flex",gap:8,marginTop:14}}>
+          <button onClick={handleDownloadInvoice}
+            style={{padding:"6px 14px",borderRadius:8,background:"rgba(255,255,255,.15)",color:"#fff",
+              border:"1px solid rgba(255,255,255,.3)",cursor:"pointer",fontFamily:"inherit",fontSize:12}}>
+            📄 Download GST Invoice
+          </button>
+          {subStatus==="Active" ? (
+            <button onClick={()=>setShowCancelConfirm(true)}
+              style={{padding:"6px 14px",borderRadius:8,background:"rgba(255,255,255,.1)",color:"rgba(255,255,255,.9)",
+                border:"1px solid rgba(255,255,255,.2)",cursor:"pointer",fontFamily:"inherit",fontSize:12}}>
+              Cancel Plan
+            </button>
+          ) : (
+            <button onClick={()=>{ setSubStatus("Active"); showToast("Subscription reinstated ✓"); }}
+              style={{padding:"6px 14px",borderRadius:8,background:"rgba(255,255,255,.2)",color:"#fff",
+                border:"1px solid rgba(255,255,255,.4)",cursor:"pointer",fontFamily:"inherit",fontSize:12,fontWeight:600}}>
+              Undo Cancellation
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Billing toggle */}
+      <div style={{display:"flex",justifyContent:"center",alignItems:"center",gap:12,marginBottom:20}}>
+        <span style={{fontWeight:yearly?400:600,fontSize:13}}>Monthly</span>
+        <div onClick={()=>setYearly(!yearly)} style={{width:44,height:24,background:yearly?C.blue:C.gray300,borderRadius:12,cursor:"pointer",position:"relative",transition:"background .2s"}}>
+          <div style={{position:"absolute",top:3,left:yearly?"auto":3,right:yearly?3:"auto",width:18,height:18,background:"#fff",borderRadius:"50%",transition:"all .2s"}} />
+        </div>
+        <span style={{fontWeight:yearly?600:400,fontSize:13}}>Yearly</span>
+        <Badge color="green">Save 17%</Badge>
+      </div>
+
+      {/* Plan cards */}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:16,marginBottom:24}}>
+        {PLANS.map(p => {
+          const isCurrent = p.name === "Pro" && subStatus === "Active";
+          return (
+            <div key={p.id} style={{border:`${p.highlight?"2px":"1px"} solid ${p.highlight?C.blue:C.gray300}`,
+              borderRadius:12,padding:20,background:C.white,position:"relative"}}>
+              {p.highlight && <div style={{position:"absolute",top:-1,right:16,background:C.blueLight,color:C.blue,fontSize:10,padding:"3px 10px",borderRadius:"0 0 8px 8px",fontWeight:600}}>Most Popular</div>}
+              <div style={{fontSize:16,fontWeight:600,marginBottom:4}}>{p.name}</div>
+              <div style={{fontSize:26,fontWeight:700,color:C.blue,margin:"8px 0 2px"}}>
+                ₹{(yearly?p.yearly:p.price).toLocaleString()}
+                <span style={{fontSize:13,color:C.gray600,fontWeight:400}}>{yearly?"/year":"/month"}</span>
+              </div>
+              <div style={{fontSize:11,color:C.gray400,marginBottom:14}}>+ 18% GST</div>
+              {p.features.map(f => (
+                <div key={f} style={{display:"flex",gap:8,fontSize:12,color:C.gray600,padding:"5px 0",borderBottom:`1px solid ${C.gray200}`}}>
+                  <span style={{color:C.green}}>✓</span>{f}
+                </div>
+              ))}
+              <Btn variant={isCurrent ? "outline" : p.highlight ? "primary" : "outline"} fullWidth style={{marginTop:14}}
+                disabled={isCurrent}
+                onClick={()=>handleSelectPlan(p.name)}>
+                {isCurrent ? "Current Plan" : "Select Plan"}
+              </Btn>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Invoices */}
+      <Card>
+        <SectionHeader title="Billing History" />
+        <Table
+          cols={["Invoice No.","Plan","Amount","GST","Total","Date","Status",""]}
+          rows={INVOICES.map(inv => [
+            <span style={{color:C.blue,fontSize:12,fontFamily:"monospace"}}>{inv.id}</span>,
+            inv.plan, inv.amount, inv.gst,
+            <span style={{fontWeight:600}}>{inv.total}</span>,
+            <span style={{fontSize:12,color:C.gray600}}>{inv.date}</span>,
+            <Badge color="green" small>Paid</Badge>,
+            <Btn size="sm" icon="⬇" onClick={()=>showToast(`Downloading ${inv.id}…`)}>PDF</Btn>
+          ])}
+        />
+      </Card>
+    </div>
+  );
+}
+
+// ─── ADMIN: Dashboard ──────────────────────────────────────────
+function AdminDash({ setScreen }) {
+  // ── Derive live stats from mock data ──────────────────────
+  const totalAgents    = AGENTS.length;
+  const activeAgents   = AGENTS.filter(a => a.status === "Active").length;
+  const pendingAgents  = AGENTS.filter(a => a.status === "Pending").length;
+  const totalListings  = PROPERTIES.length;
+  const liveListings   = PROPERTIES.filter(p => p.status === "APPROVED").length;
+  const pendingList    = PROPERTIES.filter(p => p.status === "PENDING_REVIEW").length;
+  const totalLeads     = LEADS.length;
+  const newLeads       = LEADS.filter(l => l.status === "NEW").length;
+
+  // Subscription MRR from AGENTS mock
+  const planPrices     = { Basic:999, Pro:2999, Premium:5999 };
+  const mrr = AGENTS.filter(a => a.status === "Active").reduce((sum,a) => sum + (planPrices[a.plan] || 0), 0);
+  const gst = Math.round(mrr * 0.18);
+
+  const basicCount   = AGENTS.filter(a => a.plan === "Basic").length;
+  const proCount     = AGENTS.filter(a => a.plan === "Pro").length;
+  const premiumCount = AGENTS.filter(a => a.plan === "Premium").length;
+  const totalPlans   = basicCount + proCount + premiumCount;
+
+  const fmtINR = (n) => n >= 100000 ? `₹${(n/100000).toFixed(1)}L` : `₹${n.toLocaleString()}`;
+
+  return (
+    <div style={{padding:24}}>
+      {/* MRR Hero */}
+      <div style={{background:`linear-gradient(135deg,${C.blue},${C.blueDark})`,
+        borderRadius:14, padding:"24px 28px", color:"#fff", marginBottom:20,
+        display:"flex", justifyContent:"space-between", alignItems:"center"}}>
+        <div>
+          <div style={{fontSize:20,fontWeight:700,marginBottom:4}}>PropVault Platform</div>
+          <div style={{fontSize:13,opacity:.8}}>
+            {activeAgents} active agents · {liveListings} live listings · {totalLeads} total leads
+          </div>
+          <div style={{display:"flex",gap:20,marginTop:14}}>
+            {[
+              ["Agents",   totalAgents],
+              ["Listings", liveListings],
+              ["Leads",    totalLeads],
+              ["Pending",  pendingAgents + pendingList],
+            ].map(([l,v]) => (
+              <div key={l}>
+                <div style={{fontSize:18,fontWeight:700}}>{v}</div>
+                <div style={{fontSize:11,opacity:.7}}>{l}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div style={{textAlign:"right"}}>
+          <div style={{fontSize:11,opacity:.7,marginBottom:4}}>Monthly Recurring Revenue</div>
+          <div style={{fontSize:36,fontWeight:800}}>{fmtINR(mrr)}</div>
+          <div style={{fontSize:12,opacity:.8}}>GST (18%): {fmtINR(gst)} · Net: {fmtINR(mrr-gst)}</div>
+          <Btn style={{marginTop:12,background:"rgba(255,255,255,.15)",color:"#fff",
+            borderColor:"rgba(255,255,255,.3)",fontSize:12}}
+            onClick={()=>setScreen("admin-revenue")}>
+            Full Revenue Report →
+          </Btn>
+        </div>
+      </div>
+
+      {/* KPI grid */}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,marginBottom:20}}>
+        <MetricCard label="Total Agents"    value={totalAgents}   sub={`${pendingAgents} pending approval`} icon="👥" />
+        <MetricCard label="Active Listings" value={liveListings}  sub={`${pendingList} pending review`}     icon="🏠" />
+        <MetricCard label="Total Leads"     value={totalLeads}    sub={`${newLeads} new this month`}        icon="📊" />
+        <MetricCard label="MRR"             value={fmtINR(mrr)}   sub="Active subscriptions"               icon="💰" />
+      </div>
+
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}>
+        <Card>
+          <SectionHeader title="Subscription breakdown"
+            action={<Btn size="sm" onClick={()=>setScreen("admin-subs")}>View all</Btn>} />
+          {[
+            ["Basic (₹999)",    basicCount,   totalPlans, "#B5D4F4"],
+            ["Pro (₹2,999)",    proCount,     totalPlans, C.blue],
+            ["Premium (₹5,999)",premiumCount, totalPlans, C.blueDark],
+          ].map(([plan,count,total,clr])=>{
+            const pct = total > 0 ? Math.round((count/total)*100) : 0;
+            return (
+              <div key={plan} style={{marginBottom:14}}>
+                <div style={{display:"flex",justifyContent:"space-between",fontSize:13,marginBottom:4}}>
+                  <span>{plan}</span>
+                  <span style={{color:C.gray600}}>{count} agents ({pct}%)</span>
+                </div>
+                <div style={{height:8,background:C.gray200,borderRadius:4}}>
+                  <div style={{height:"100%",width:`${pct}%`,background:clr,borderRadius:4}} />
+                </div>
+              </div>
+            );
+          })}
+          <div style={{paddingTop:12,borderTop:`1px solid ${C.gray200}`}}>
+            {[["MRR",fmtINR(mrr)],["GST (18%)",fmtINR(gst)],["Net Revenue",fmtINR(mrr-gst)]].map(([l,v])=>(
+              <div key={l} style={{display:"flex",justifyContent:"space-between",fontSize:13,marginBottom:6}}>
+                <span style={{color:C.gray600}}>{l}</span><span style={{fontWeight:600,color:l==="Net Revenue"?C.blue:"inherit"}}>{v}</span>
+              </div>
+            ))}
+          </div>
+        </Card>
+
+        <Card>
+          <SectionHeader title={`Pending approvals (${pendingAgents + pendingList})`}
+            action={<Btn size="sm" onClick={()=>setScreen("admin-agents")}>Agents</Btn>} />
+
+          {pendingAgents === 0 && pendingList === 0 ? (
+            <div style={{textAlign:"center",padding:"24px 0",color:C.gray400}}>
+              <div style={{fontSize:28,marginBottom:8}}>✅</div>
+              <div style={{fontSize:13}}>All caught up! No pending approvals.</div>
+            </div>
+          ) : (
+            <>
+              {AGENTS.filter(a=>a.status==="Pending").map(a=>(
+                <div key={a.id} style={{display:"flex",alignItems:"center",gap:10,
+                  padding:"10px 0",borderBottom:`1px solid ${C.gray200}`}}>
+                  <div style={{width:36,height:36,borderRadius:"50%",background:C.blueLight,
+                    display:"flex",alignItems:"center",justifyContent:"center",
+                    fontWeight:700,color:C.blue,fontSize:14}}>{a.company[0]}</div>
+                  <div style={{flex:1}}>
+                    <div style={{fontSize:13,fontWeight:500}}>{a.company}</div>
+                    <div style={{fontSize:11,color:C.gray600}}>{a.city} · {a.plan} plan</div>
+                  </div>
+                  <Badge color="amber" small>Agent</Badge>
+                  <Btn size="sm" variant="success" onClick={()=>setScreen("admin-agents")}>Review</Btn>
+                </div>
+              ))}
+              {pendingList > 0 && (
+                <Alert type="info" style={{marginTop:10}}>
+                  {pendingList} listing{pendingList>1?"s":""} awaiting review.{" "}
+                  <button onClick={()=>setScreen("admin-listings")}
+                    style={{color:C.blue,background:"none",border:"none",cursor:"pointer",
+                      fontFamily:"inherit",fontWeight:600}}>
+                    Review now →
+                  </button>
+                </Alert>
+              )}
+            </>
+          )}
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+// ─── ADMIN: Agents ─────────────────────────────────────────────
+function AdminAgents({ setScreen, setSelectedAgent }) {
+  const [agents, setAgents] = useState(AGENTS.map(a=>({...a})));
+  const [filter, setFilter] = useState("All");
+  const [selected, setSelected] = useState(null);
+  const [toast, setToast] = useState(null);
+
+  const filtered = filter==="All" ? agents : agents.filter(a=>a.status===filter);
+
+  const showToast = (msg, type="success") => {
+    setToast({msg,type});
+    setTimeout(()=>setToast(null), 3000);
+  };
+
+  const approveAgent = (id) => {
+    setAgents(prev => prev.map(a => a.id===id ? {...a,status:"Active"} : a));
+    if (selected?.id===id) setSelected(s=>({...s,status:"Active"}));
+    showToast("Agent approved and notified by email ✓");
+  };
+
+  const suspendAgent = (id) => {
+    setAgents(prev => prev.map(a => a.id===id ? {...a,status:"Suspended"} : a));
+    if (selected?.id===id) setSelected(s=>({...s,status:"Suspended"}));
+    showToast("Agent suspended","warn");
+  };
+
+  const reinstateAgent = (id) => {
+    setAgents(prev => prev.map(a => a.id===id ? {...a,status:"Active"} : a));
+    if (selected?.id===id) setSelected(s=>({...s,status:"Active"}));
+    showToast("Agent reinstated ✓");
+  };
+
+  return (
+    <div style={{padding:24,position:"relative"}}>
+      {/* Toast notification */}
+      {toast && (
+        <div style={{position:"fixed",top:72,right:24,zIndex:200,
+          background:toast.type==="warn"?C.amberLight:C.greenLight,
+          color:toast.type==="warn"?C.amber:C.green,
+          borderRadius:10,padding:"12px 18px",fontSize:13,fontWeight:500,
+          boxShadow:"0 4px 16px rgba(0,0,0,.12)",
+          border:`1px solid ${toast.type==="warn"?C.amber:C.green}`}}>
+          {toast.msg}
+        </div>
+      )}
+
+      <SectionHeader title={`Agent Management (${agents.length} total)`} action={
+        <Btn size="sm">⬇ Export CSV</Btn>
+      }/>
+
+      <div style={{display:"flex",gap:6,marginBottom:16,flexWrap:"wrap"}}>
+        {["All","Active","Pending","Suspended"].map(f=>(
+          <button key={f} onClick={()=>setFilter(f)}
+            style={{padding:"5px 12px",borderRadius:20,border:`1px solid ${filter===f?C.blue:C.gray300}`,
+              background:filter===f?C.blue:"transparent",color:filter===f?"#fff":C.gray600,
+              fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>
+            {f} ({f==="All"?agents.length:agents.filter(a=>a.status===f).length})
+          </button>
+        ))}
+      </div>
+
+      <div style={{display:"grid",gridTemplateColumns:selected?"1fr 340px":"1fr",gap:16}}>
+        <Card padding="0">
+          <Table
+            cols={["Agent / Company","City","Plan","Listings","Joined","Status","Actions"]}
+            rows={filtered.map(a => [
+              <div style={{cursor:"pointer"}} onClick={()=>setSelected(a)}>
+                <div style={{fontWeight:500,fontSize:13,color:selected?.id===a.id?C.blue:C.gray800}}>{a.company}</div>
+                <div style={{fontSize:11,color:C.gray600}}>{a.name} · {a.license}</div>
+              </div>,
+              a.city,
+              <Badge color={a.plan==="Premium"?"blue":a.plan==="Pro"?"purple":"gray"} small>{a.plan}</Badge>,
+              <span>{a.active} / {a.listings}</span>,
+              <span style={{fontSize:12,color:C.gray600}}>{a.joined}</span>,
+              <Badge color={a.status==="Active"?"green":a.status==="Pending"?"amber":"red"} small>{a.status}</Badge>,
+              <div style={{display:"flex",gap:6}}>
+                {a.status==="Pending"   && <Btn size="sm" variant="success" onClick={()=>approveAgent(a.id)}>Approve</Btn>}
+                {a.status==="Suspended" && <Btn size="sm" variant="primary" onClick={()=>reinstateAgent(a.id)}>Reinstate</Btn>}
+                <Btn size="sm" onClick={()=>setSelected(a)}>View</Btn>
+                {a.status!=="Suspended" && <Btn size="sm" style={{color:C.red,borderColor:C.red}} onClick={()=>suspendAgent(a.id)}>Suspend</Btn>}
+              </div>
+            ])}
+          />
+        </Card>
+
+        {/* Agent detail panel */}
+        {selected && (
+          <Card style={{alignSelf:"start"}}>
+            <div style={{display:"flex",justifyContent:"space-between",marginBottom:16}}>
+              <h3 style={{fontSize:15,fontWeight:600,margin:0}}>{selected.company}</h3>
+              <button onClick={()=>setSelected(null)} style={{background:"none",border:"none",fontSize:18,cursor:"pointer",color:C.gray400}}>✕</button>
+            </div>
+
+            <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14}}>
+              <div style={{width:44,height:44,borderRadius:10,background:C.blueLight,
+                display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,color:C.blue,fontSize:18}}>
+                {selected.company[0]}
+              </div>
+              <div>
+                <div style={{fontWeight:600}}>{selected.name}</div>
+                <Badge color={selected.status==="Active"?"green":selected.status==="Pending"?"amber":"red"}>
+                  {selected.status}
+                </Badge>
+              </div>
+            </div>
+
+            {[
+              ["📍 City",    selected.city],
+              ["📋 License", selected.license],
+              ["💳 Plan",    selected.plan],
+              ["🏠 Listings",`${selected.active} active / ${selected.listings} total`],
+              ["📅 Joined",  selected.joined],
+              ["💰 MRR",     `₹${selected.mrr.toLocaleString()}/mo`],
+            ].map(([l,v])=>(
+              <div key={l} style={{display:"flex",justifyContent:"space-between",
+                padding:"7px 0",borderBottom:`1px solid ${C.gray200}`,fontSize:13}}>
+                <span style={{color:C.gray600}}>{l}</span>
+                <span style={{fontWeight:500}}>{v}</span>
+              </div>
+            ))}
+
+            <div style={{display:"flex",flexDirection:"column",gap:8,marginTop:14}}>
+              {selected.status==="Pending" && (
+                <Btn variant="success" fullWidth onClick={()=>approveAgent(selected.id)}>
+                  ✓ Approve Agent
+                </Btn>
+              )}
+              {selected.status==="Suspended" && (
+                <Btn variant="primary" fullWidth onClick={()=>reinstateAgent(selected.id)}>
+                  Reinstate Agent
+                </Btn>
+              )}
+              {selected.status!=="Suspended" && (
+                <Btn style={{color:C.red,borderColor:C.red}} fullWidth onClick={()=>suspendAgent(selected.id)}>
+                  Suspend Agent
+                </Btn>
+              )}
+              <Btn fullWidth onClick={()=>{
+                setSelectedAgent && setSelectedAgent(selected);
+                setScreen("agent-profile");
+              }}>
+                View Public Profile →
+              </Btn>
+            </div>
+          </Card>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── ADMIN: Listings ───────────────────────────────────────────
+function AdminListings({ setScreen, setDetailProp }) {
+  const [listings, setListings] = useState(
+    PROPERTIES.map(p => ({ ...p, submittedAgo: `${Math.floor(Math.random()*12)+1}h ago` }))
+  );
+  const [filter, setFilter]   = useState("ALL");
+  const [selected, setSelected] = useState(null);
+  const [rejectReason, setRejectReason] = useState("");
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [rejectTarget, setRejectTarget] = useState(null);
+  const [toast, setToast] = useState(null);
+
+  const showToast = (msg, type="success") => {
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), 3000);
+  };
+
+  const approveListing = (id) => {
+    setListings(prev => prev.map(p => p.id === id ? { ...p, status:"APPROVED" } : p));
+    if (selected?.id === id) setSelected(s => ({ ...s, status:"APPROVED" }));
+    showToast("Listing approved — agent notified by email ✓");
+  };
+
+  const openReject = (p) => { setRejectTarget(p); setRejectReason(""); setShowRejectModal(true); };
+
+  const confirmReject = () => {
+    if (!rejectReason.trim()) return;
+    setListings(prev => prev.map(p => p.id === rejectTarget.id ? { ...p, status:"REJECTED", rejectionReason: rejectReason } : p));
+    if (selected?.id === rejectTarget.id) setSelected(s => ({ ...s, status:"REJECTED" }));
+    setShowRejectModal(false);
+    showToast("Listing rejected — agent notified with reason", "warn");
+  };
+
+  const filtered = filter === "ALL"
+    ? listings
+    : listings.filter(p => p.status === filter);
+
+  const statusCounts = {
+    ALL: listings.length,
+    PENDING_REVIEW: listings.filter(p => p.status === "PENDING_REVIEW").length,
+    APPROVED:       listings.filter(p => p.status === "APPROVED").length,
+    REJECTED:       listings.filter(p => p.status === "REJECTED").length,
+  };
+
+  return (
+    <div style={{ padding:24, position:"relative" }}>
+      {/* Toast */}
+      {toast && (
+        <div style={{ position:"fixed", top:68, right:24, zIndex:300,
+          background: toast.type==="warn" ? C.amberLight : C.greenLight,
+          color: toast.type==="warn" ? C.amber : C.green,
+          border: `1px solid ${toast.type==="warn" ? C.amber : C.green}`,
+          borderRadius:10, padding:"12px 20px", fontSize:13, fontWeight:500,
+          boxShadow:"0 4px 20px rgba(0,0,0,.12)" }}>
+          {toast.msg}
+        </div>
+      )}
+
+      {/* Reject reason modal */}
+      {showRejectModal && (
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.5)",
+          display:"flex", alignItems:"center", justifyContent:"center", zIndex:200 }}>
+          <div style={{ background:C.white, borderRadius:14, padding:28, width:440, maxWidth:"90vw" }}>
+            <h3 style={{ margin:"0 0 6px", fontSize:16, fontWeight:700 }}>Reject Listing</h3>
+            <p style={{ fontSize:13, color:C.gray600, marginBottom:16 }}>
+              <b>{rejectTarget?.title}</b> — the agent will receive this reason by email.
+            </p>
+            <Input
+              label="Reason for rejection *"
+              placeholder="e.g. Photos are too dark, address is incomplete, misleading price…"
+              rows={3} value={rejectReason}
+              onChange={e => setRejectReason(e.target.value)}
+            />
+            <div style={{ display:"flex", gap:8, justifyContent:"flex-end", marginTop:8 }}>
+              <Btn onClick={() => setShowRejectModal(false)}>Cancel</Btn>
+              <Btn variant="danger" onClick={confirmReject} disabled={!rejectReason.trim()}>
+                Confirm Rejection
+              </Btn>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <SectionHeader
+        title="Listing Management"
+        action={
+          <div style={{ display:"flex", gap:8, alignItems:"center" }}>
+            <Badge color="amber">{statusCounts.PENDING_REVIEW} pending</Badge>
+            <Btn size="sm">⬇ Export</Btn>
+          </div>
+        }
+      />
+
+      {/* Status filter tabs */}
+      <div style={{ display:"flex", gap:6, marginBottom:16 }}>
+        {[["ALL","All"],["PENDING_REVIEW","Pending Review"],["APPROVED","Approved"],["REJECTED","Rejected"]].map(([val,label]) => (
+          <button key={val} onClick={() => setFilter(val)}
+            style={{ padding:"6px 14px", borderRadius:20, fontSize:12, cursor:"pointer",
+              fontFamily:"inherit", border:`1px solid ${filter===val ? C.blue : C.gray300}`,
+              background: filter===val ? C.blue : "transparent",
+              color: filter===val ? "#fff" : C.gray600 }}>
+            {label} ({statusCounts[val] ?? 0})
+          </button>
+        ))}
+      </div>
+
+      <div style={{ display:"grid", gridTemplateColumns: selected ? "1fr 380px" : "1fr", gap:16 }}>
+        <Card padding="0">
+          <Table
+            cols={["Property","Agent","Type","Price","Submitted","Status","Actions"]}
+            rows={filtered.map(p => [
+              /* Property */
+              <div style={{ cursor:"pointer" }} onClick={() => setSelected(p)}>
+                <div style={{ fontWeight:500, fontSize:13,
+                  color: selected?.id===p.id ? C.blue : C.gray800 }}>{p.title}</div>
+                <div style={{ fontSize:11, color:C.gray600 }}>
+                  {p.locality}, {p.city} · {p.purpose}
+                </div>
+                {p.status==="REJECTED" && p.rejectionReason && (
+                  <div style={{ fontSize:10, color:C.red, marginTop:2 }}>
+                    Reason: {p.rejectionReason}
+                  </div>
+                )}
+              </div>,
+              /* Agent */
+              <span style={{ fontSize:12 }}>{p.agent.company}</span>,
+              /* Type */
+              <Badge color="gray" small>{p.type}</Badge>,
+              /* Price */
+              <span style={{ fontWeight:600, color:C.blue }}>{p.priceLabel}</span>,
+              /* Submitted */
+              <span style={{ fontSize:11, color:C.gray600 }}>{p.submittedAgo}</span>,
+              /* Status */
+              <Badge color={p.status==="APPROVED"?"green":p.status==="PENDING_REVIEW"?"amber":"red"} small>
+                {p.status.replace(/_/g," ")}
+              </Badge>,
+              /* Actions */
+              <div style={{ display:"flex", gap:5 }}>
+                {p.status !== "APPROVED" && (
+                  <Btn size="sm" variant="success" onClick={() => approveListing(p.id)}>✓ Approve</Btn>
+                )}
+                {p.status !== "REJECTED" && (
+                  <Btn size="sm" style={{ color:C.red, borderColor:C.red }}
+                    onClick={() => openReject(p)}>✕ Reject</Btn>
+                )}
+                <Btn size="sm" onClick={() => { setDetailProp && setDetailProp(p); setScreen("detail"); }}>
+                  Preview
+                </Btn>
+              </div>
+            ])}
+          />
+        </Card>
+
+        {/* Listing detail panel */}
+        {selected && (
+          <Card style={{ alignSelf:"start" }}>
+            <div style={{ display:"flex", justifyContent:"space-between", marginBottom:14 }}>
+              <h3 style={{ fontSize:15, fontWeight:700, margin:0 }}>Listing Detail</h3>
+              <button onClick={() => setSelected(null)}
+                style={{ background:"none", border:"none", fontSize:18, cursor:"pointer", color:C.gray400 }}>✕</button>
+            </div>
+
+            {/* Hero */}
+            <div style={{ height:140, background:`linear-gradient(${selected.gradient})`,
+              borderRadius:10, display:"flex", alignItems:"center", justifyContent:"center",
+              fontSize:40, marginBottom:14 }}>{selected.icon}</div>
+
+            <div style={{ fontWeight:700, fontSize:15, marginBottom:4 }}>{selected.title}</div>
+            <div style={{ fontSize:13, color:C.blue, fontWeight:600, marginBottom:2 }}>{selected.priceLabel}</div>
+            <div style={{ fontSize:12, color:C.gray600, marginBottom:14 }}>
+              📍 {selected.locality}, {selected.city}
+            </div>
+
+            <Badge color={selected.status==="APPROVED"?"green":selected.status==="PENDING_REVIEW"?"amber":"red"}>
+              {selected.status.replace(/_/g," ")}
+            </Badge>
+
+            <div style={{ marginTop:14 }}>
+              {[
+                ["Agent",       selected.agent.company],
+                ["Type",        selected.type],
+                ["Purpose",     selected.purpose],
+                ["Area",        `${selected.area?.toLocaleString()} ft²`],
+                ...(selected.beds > 0 ? [["Bedrooms", `${selected.beds} BHK`]] : []),
+                ["Submitted",   selected.submittedAgo],
+              ].map(([l,v]) => (
+                <div key={l} style={{ display:"flex", justifyContent:"space-between",
+                  padding:"7px 0", borderBottom:`1px solid ${C.gray200}`, fontSize:13 }}>
+                  <span style={{ color:C.gray600 }}>{l}</span>
+                  <span style={{ fontWeight:500 }}>{v}</span>
+                </div>
+              ))}
+            </div>
+
+            {selected.rejectionReason && (
+              <div style={{ marginTop:12, background:C.redLight, borderRadius:8,
+                padding:"10px 12px", fontSize:12, color:C.red }}>
+                <b>Rejection reason:</b> {selected.rejectionReason}
+              </div>
+            )}
+
+            <div style={{ display:"flex", flexDirection:"column", gap:8, marginTop:16 }}>
+              {selected.status !== "APPROVED" && (
+                <Btn variant="success" fullWidth onClick={() => approveListing(selected.id)}>
+                  ✓ Approve Listing
+                </Btn>
+              )}
+              {selected.status !== "REJECTED" && (
+                <Btn style={{ color:C.red, borderColor:C.red }} fullWidth onClick={() => openReject(selected)}>
+                  ✕ Reject Listing
+                </Btn>
+              )}
+              <Btn fullWidth onClick={() => { setDetailProp && setDetailProp(selected); setScreen("detail"); }}>
+                Preview Public Page →
+              </Btn>
+            </div>
+          </Card>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── ADMIN: Subscriptions ──────────────────────────────────────
+function AdminSubs({ setScreen }) {
+  const [subs, setSubs] = useState([
+    { id:"s1", agent:"Sharma Homes",     plan:"Premium", amount:"₹5,999", gst:"₹1,080", total:"₹7,079", renewal:"15 Apr 2024", status:"Active",   rid:"sub_N12abc", city:"Delhi" },
+    { id:"s2", agent:"Lakshmi Estates",  plan:"Pro",     amount:"₹2,999", gst:"₹540",   total:"₹3,539", renewal:"20 Apr 2024", status:"Active",   rid:"sub_N45def", city:"Chennai" },
+    { id:"s3", agent:"Ravi Realty",      plan:"Pro",     amount:"₹2,999", gst:"₹540",   total:"₹3,539", renewal:"—",           status:"Trial",    rid:"—",          city:"Mumbai" },
+    { id:"s4", agent:"BLR Spaces",       plan:"Premium", amount:"₹5,999", gst:"₹1,080", total:"₹7,079", renewal:"01 May 2024", status:"Active",   rid:"sub_N78ghi", city:"Bangalore" },
+    { id:"s5", agent:"Patel Properties", plan:"Basic",   amount:"₹999",   gst:"₹180",   total:"₹1,179", renewal:"—",           status:"Past Due", rid:"sub_N99jkl", city:"Ahmedabad" },
+    { id:"s6", agent:"Gupta Homes",      plan:"Basic",   amount:"₹999",   gst:"₹180",   total:"₹1,179", renewal:"—",           status:"Cancelled",rid:"sub_N00xyz", city:"Lucknow" },
+  ]);
+  const [search, setSearch]     = useState("");
+  const [planFilter, setPlanF]  = useState("All");
+  const [statusFilter, setStatF]= useState("All");
+  const [selected, setSelected] = useState(null);
+  const [toast, setToast]       = useState(null);
+
+  const showToast = (msg, type="success") => { setToast({msg,type}); setTimeout(()=>setToast(null),3000); };
+
+  const cancelSub = (id) => {
+    setSubs(prev => prev.map(s => s.id===id ? {...s,status:"Cancelled"} : s));
+    if (selected?.id===id) setSelected(s => ({...s,status:"Cancelled"}));
+    showToast("Subscription cancelled — agent notified","warn");
+  };
+  const reinstateSub = (id) => {
+    setSubs(prev => prev.map(s => s.id===id ? {...s,status:"Active"} : s));
+    if (selected?.id===id) setSelected(s => ({...s,status:"Active"}));
+    showToast("Subscription reinstated ✓");
+  };
+
+  const filtered = subs
+    .filter(s => planFilter==="All" || s.plan===planFilter)
+    .filter(s => statusFilter==="All" || s.status===statusFilter)
+    .filter(s => !search || s.agent.toLowerCase().includes(search.toLowerCase()));
+
+  const mrr = { Basic:999*2, Pro:2999*2, Premium:5999*2 };
+  const totalMRR = subs.filter(s=>s.status==="Active").reduce((acc,s)=>acc+(mrr[s.plan]||0),0);
+
+  return (
+    <div style={{ padding:24, position:"relative" }}>
+      {toast && (
+        <div style={{ position:"fixed", top:68, right:24, zIndex:300,
+          background: toast.type==="warn" ? C.amberLight : C.greenLight,
+          color: toast.type==="warn" ? C.amber : C.green,
+          border:`1px solid ${toast.type==="warn" ? C.amber : C.green}`,
+          borderRadius:10, padding:"12px 20px", fontSize:13, fontWeight:500,
+          boxShadow:"0 4px 20px rgba(0,0,0,.12)" }}>
+          {toast.msg}
+        </div>
+      )}
+
+      <SectionHeader title="Subscription Management"
+        action={
+          <div style={{ display:"flex", gap:8 }}>
+            <Btn size="sm" onClick={() => setScreen("admin-revenue")}>📊 Revenue Report</Btn>
+            <Btn size="sm">⬇ Export CSV</Btn>
+          </div>
+        }
+      />
+
+      {/* Plan summary cards */}
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:12, marginBottom:20 }}>
+        {[
+          ["Total Active",  subs.filter(s=>s.status==="Active").length,    "subscriptions", C.blue],
+          ["Basic Plan",    subs.filter(s=>s.plan==="Basic").length,       "agents · ₹999/mo", C.gray400],
+          ["Pro Plan",      subs.filter(s=>s.plan==="Pro").length,         "agents · ₹2,999/mo", C.blue],
+          ["Premium Plan",  subs.filter(s=>s.plan==="Premium").length,     "agents · ₹5,999/mo", C.blueDark],
+        ].map(([label,val,sub,clr])=>(
+          <Card key={label} style={{ borderTop:`3px solid ${clr}` }}>
+            <div style={{ fontSize:22, fontWeight:700, color:clr }}>{val}</div>
+            <div style={{ fontSize:13, fontWeight:500, color:C.gray800 }}>{label}</div>
+            <div style={{ fontSize:11, color:C.gray400 }}>{sub}</div>
+          </Card>
+        ))}
+      </div>
+
+      {/* Filters */}
+      <div style={{ display:"flex", gap:8, marginBottom:16, flexWrap:"wrap", alignItems:"center" }}>
+        <input value={search} onChange={e=>setSearch(e.target.value)}
+          placeholder="Search agents…"
+          style={{ padding:"7px 12px", border:`1px solid ${C.gray300}`, borderRadius:8,
+            fontSize:13, fontFamily:"inherit", outline:"none", minWidth:200 }}/>
+        <div style={{ display:"flex", gap:4 }}>
+          {["All","Basic","Pro","Premium"].map(p=>(
+            <button key={p} onClick={()=>setPlanF(p)}
+              style={{ padding:"5px 12px", borderRadius:20, fontSize:12, cursor:"pointer",
+                fontFamily:"inherit", border:`1px solid ${planFilter===p?C.blue:C.gray300}`,
+                background:planFilter===p?C.blue:"transparent", color:planFilter===p?"#fff":C.gray600 }}>
+              {p}
+            </button>
+          ))}
+        </div>
+        <div style={{ display:"flex", gap:4 }}>
+          {["All","Active","Trial","Past Due","Cancelled"].map(s=>(
+            <button key={s} onClick={()=>setStatF(s)}
+              style={{ padding:"5px 12px", borderRadius:20, fontSize:12, cursor:"pointer",
+                fontFamily:"inherit", border:`1px solid ${statusFilter===s?C.blue:C.gray300}`,
+                background:statusFilter===s?C.blue:"transparent", color:statusFilter===s?"#fff":C.gray600 }}>
+              {s}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div style={{ display:"grid", gridTemplateColumns:selected?"1fr 320px":"1fr", gap:16 }}>
+        <Card padding="0">
+          <Table
+            cols={["Agent","Plan","Amount","GST","Next Renewal","Status","Razorpay ID","Actions"]}
+            rows={filtered.map(s=>[
+              <div style={{ cursor:"pointer" }} onClick={()=>setSelected(s)}>
+                <div style={{ fontWeight:500, fontSize:13,
+                  color:selected?.id===s.id?C.blue:C.gray800 }}>{s.agent}</div>
+                <div style={{ fontSize:11, color:C.gray400 }}>{s.city}</div>
+              </div>,
+              <Badge color={s.plan==="Premium"?"blue":s.plan==="Pro"?"purple":"gray"} small>{s.plan}</Badge>,
+              s.amount, s.gst,
+              <span style={{ fontSize:12, color:C.gray600 }}>{s.renewal}</span>,
+              <Badge color={s.status==="Active"?"green":s.status==="Trial"?"amber":s.status==="Past Due"?"red":"gray"} small>
+                {s.status}
+              </Badge>,
+              <span style={{ fontSize:11, fontFamily:"monospace", color:C.gray400 }}>{s.rid}</span>,
+              <div style={{ display:"flex", gap:5 }}>
+                {s.status==="Cancelled" && (
+                  <Btn size="sm" variant="primary" onClick={()=>reinstateSub(s.id)}>Reinstate</Btn>
+                )}
+                {s.status!=="Cancelled" && (
+                  <Btn size="sm" style={{ color:C.red, borderColor:C.red }} onClick={()=>cancelSub(s.id)}>
+                    Cancel
+                  </Btn>
+                )}
+                <Btn size="sm" onClick={()=>setSelected(s)}>Detail</Btn>
+              </div>
+            ])}
+          />
+        </Card>
+
+        {selected && (
+          <Card style={{ alignSelf:"start" }}>
+            <div style={{ display:"flex", justifyContent:"space-between", marginBottom:14 }}>
+              <h3 style={{ fontSize:15, fontWeight:700, margin:0 }}>Subscription Detail</h3>
+              <button onClick={()=>setSelected(null)}
+                style={{ background:"none", border:"none", fontSize:18, cursor:"pointer", color:C.gray400 }}>✕</button>
+            </div>
+            <div style={{ fontWeight:700, fontSize:16, marginBottom:2 }}>{selected.agent}</div>
+            <div style={{ fontSize:12, color:C.gray600, marginBottom:14 }}>{selected.city}</div>
+            <Badge color={selected.status==="Active"?"green":selected.status==="Trial"?"amber":"red"}>
+              {selected.status}
+            </Badge>
+            <div style={{ marginTop:14 }}>
+              {[
+                ["Plan",          selected.plan],
+                ["Amount",        selected.amount],
+                ["GST (18%)",     selected.gst],
+                ["Total",         selected.total],
+                ["Next Renewal",  selected.renewal],
+                ["Razorpay ID",   selected.rid],
+              ].map(([l,v])=>(
+                <div key={l} style={{ display:"flex", justifyContent:"space-between",
+                  padding:"7px 0", borderBottom:`1px solid ${C.gray200}`, fontSize:13 }}>
+                  <span style={{ color:C.gray600 }}>{l}</span>
+                  <span style={{ fontWeight:500, fontFamily:l==="Razorpay ID"?"monospace":"inherit",
+                    fontSize:l==="Razorpay ID"?11:13 }}>{v}</span>
+                </div>
+              ))}
+            </div>
+            <div style={{ display:"flex", flexDirection:"column", gap:8, marginTop:16 }}>
+              {selected.status==="Cancelled"
+                ? <Btn variant="primary" fullWidth onClick={()=>reinstateSub(selected.id)}>Reinstate Subscription</Btn>
+                : <Btn style={{ color:C.red, borderColor:C.red }} fullWidth onClick={()=>cancelSub(selected.id)}>
+                    Cancel Subscription
+                  </Btn>
+              }
+              <Btn fullWidth onClick={()=>setScreen("admin-revenue")}>View Revenue Report →</Btn>
+            </div>
+          </Card>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── NEW: Sparkline mini-chart (pure SVG, no deps) ────────────
+function Sparkline({ data=[], color=C.blue, height=48, width=160 }) {
+  if (!data.length) return null;
+  const max = Math.max(...data, 1);
+  const pts = data.map((v, i) => {
+    const x = (i / (data.length - 1)) * width;
+    const y = height - (v / max) * (height - 6) - 3;
+    return `${x},${y}`;
+  }).join(" ");
+  const areaBot = `${width},${height} 0,${height}`;
+  return (
+    <svg width={width} height={height} style={{display:"block"}}>
+      <defs>
+        <linearGradient id={`sg-${color.replace("#","")}`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={color} stopOpacity="0.25"/>
+          <stop offset="100%" stopColor={color} stopOpacity="0.02"/>
+        </linearGradient>
+      </defs>
+      <polygon points={`0,${height} ${pts} ${areaBot}`}
+        fill={`url(#sg-${color.replace("#","")})`} />
+      <polyline points={pts} fill="none" stroke={color} strokeWidth="2" strokeLinejoin="round"/>
+    </svg>
+  );
+}
+
+// ─── NEW: Mini bar chart (SVG) ─────────────────────────────────
+function BarChart({ data=[], labels=[], color=C.blue, height=120 }) {
+  const max = Math.max(...data.map(d=>d||0), 1);
+  const bw = Math.max(8, Math.floor(500 / data.length) - 4);
+  return (
+    <svg width="100%" height={height + 24} viewBox={`0 0 ${data.length*( bw+4)} ${height+24}`}
+      style={{width:"100%",display:"block"}}>
+      {data.map((v,i) => {
+        const bh = Math.max(2, ((v||0)/max)*(height-10));
+        const x = i*(bw+4);
+        return (
+          <g key={i}>
+            <rect x={x} y={height-bh} width={bw} height={bh} rx={3}
+              fill={color} opacity={0.8}/>
+            {labels[i] && <text x={x+bw/2} y={height+16} textAnchor="middle"
+              fontSize={9} fill={C.gray600}>{labels[i]}</text>}
+          </g>
+        );
+      })}
+    </svg>
+  );
+}
+
+// ─── NEW: Stat tile with sparkline ────────────────────────────
+function StatTile({ label, value, change, data, color=C.blue, icon }) {
+  const pos = !change || change >= 0;
+  return (
+    <Card>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
+        <div>
+          <div style={{fontSize:12,color:C.gray600,marginBottom:6,display:"flex",gap:5,alignItems:"center"}}>
+            {icon && <span>{icon}</span>}{label}
+          </div>
+          <div style={{fontSize:26,fontWeight:700,color:C.gray800}}>{value}</div>
+          {change !== undefined && (
+            <div style={{fontSize:12,color:pos?C.green:C.red,marginTop:3}}>
+              {pos?"↑":"↓"} {Math.abs(change)}% vs last month
+            </div>
+          )}
+        </div>
+        {data && <Sparkline data={data} color={color} />}
+      </div>
+    </Card>
+  );
+}
+
+// ─── NEW: Agent Analytics Screen ─────────────────────────────
+const MOCK_DAILY = Array.from({length:30},(_,i)=>({
+  date:`Jun ${i+1}`,
+  views: Math.floor(Math.random()*120+20),
+  leads: Math.floor(Math.random()*8+1),
+  whatsapp: Math.floor(Math.random()*15+2),
+  calls: Math.floor(Math.random()*6+1),
+}));
+
+function AgentAnalyticsScreen({ setScreen }) {
+  const [range, setRange] = useState(30);
+  const [tab, setTab] = useState("views");
+  const days = MOCK_DAILY.slice(-range);
+  const total = k => days.reduce((s,d)=>s+(d[k]||0),0);
+  const tabColor = {views:C.blue, leads:C.green, whatsapp:"#25D366", calls:C.amber};
+
+  return (
+    <div style={{padding:24}}>
+      <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:20}}>
+        <button onClick={()=>setScreen("agent-dash")} style={{background:"none",border:"none",cursor:"pointer",color:C.blue,fontSize:13,fontFamily:"inherit"}}>← Dashboard</button>
+        <h2 style={{fontSize:18,fontWeight:600,margin:0}}>Analytics</h2>
+        <div style={{marginLeft:"auto",display:"flex",gap:6}}>
+          {[7,14,30].map(d=>(
+            <button key={d} onClick={()=>setRange(d)}
+              style={{padding:"4px 12px",borderRadius:20,border:`1px solid ${range===d?C.blue:C.gray300}`,
+                background:range===d?C.blue:"transparent",color:range===d?"#fff":C.gray600,
+                fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>
+              {d}d
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* KPI tiles */}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,marginBottom:20}}>
+        <StatTile label="Total Views"    value={total("views").toLocaleString()} change={18} data={days.map(d=>d.views)}    color={C.blue}  icon="👁"/>
+        <StatTile label="Leads Generated" value={total("leads")}                 change={12} data={days.map(d=>d.leads)}    color={C.green} icon="👤"/>
+        <StatTile label="WhatsApp Clicks" value={total("whatsapp")}              change={-4} data={days.map(d=>d.whatsapp)} color="#25D366" icon="💬"/>
+        <StatTile label="Call Clicks"     value={total("calls")}                 change={8}  data={days.map(d=>d.calls)}    color={C.amber} icon="📞"/>
+      </div>
+
+      {/* Main chart */}
+      <Card style={{marginBottom:20}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16}}>
+          <h3 style={{fontSize:15,fontWeight:600,margin:0}}>Daily Performance</h3>
+          <div style={{display:"flex",gap:6}}>
+            {["views","leads","whatsapp","calls"].map(t=>(
+              <button key={t} onClick={()=>setTab(t)}
+                style={{padding:"4px 12px",borderRadius:20,border:`1px solid ${tab===t?tabColor[t]:C.gray300}`,
+                  background:tab===t?tabColor[t]:"transparent",color:tab===t?"#fff":C.gray600,
+                  fontSize:11,cursor:"pointer",fontFamily:"inherit",textTransform:"capitalize"}}>
+                {t}
+              </button>
+            ))}
+          </div>
+        </div>
+        <BarChart data={days.map(d=>d[tab])} labels={days.map((_,i)=>i%5===0?days[i].date:"")} color={tabColor[tab]} height={140}/>
+      </Card>
+
+      {/* Top properties + conversion */}
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}>
+        <Card>
+          <h3 style={{fontSize:14,fontWeight:600,margin:"0 0 14px"}}>Top Properties by Views</h3>
+          {PROPERTIES.slice(0,5).map((p,i)=>{
+            const pct = Math.round((5-i)/5*100);
+            return (
+              <div key={p.id} style={{marginBottom:14}}>
+                <div style={{display:"flex",justifyContent:"space-between",fontSize:13,marginBottom:4}}>
+                  <span style={{fontWeight:500,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:"60%"}}>{p.title}</span>
+                  <span style={{color:C.blue,fontWeight:600}}>{p.views + Math.floor(Math.random()*80)}</span>
+                </div>
+                <div style={{height:6,background:C.gray200,borderRadius:3}}>
+                  <div style={{height:"100%",width:`${pct}%`,background:C.blue,borderRadius:3}}/>
+                </div>
+              </div>
+            );
+          })}
+        </Card>
+        <Card>
+          <h3 style={{fontSize:14,fontWeight:600,margin:"0 0 14px"}}>Conversion Funnel</h3>
+          {[
+            {label:"Property Views",    val:total("views"), color:C.blue},
+            {label:"WhatsApp Clicks",   val:total("whatsapp"), color:"#25D366"},
+            {label:"Leads Submitted",   val:total("leads"), color:C.green},
+            {label:"Visits Scheduled",  val:Math.floor(total("leads")*0.4), color:C.purple||C.amber},
+            {label:"Deals Closed",      val:Math.floor(total("leads")*0.12), color:C.green},
+          ].map((row,i,arr)=>{
+            const pct = Math.round((row.val/arr[0].val)*100)||0;
+            return (
+              <div key={row.label} style={{marginBottom:12}}>
+                <div style={{display:"flex",justifyContent:"space-between",fontSize:12,marginBottom:3}}>
+                  <span style={{color:C.gray600}}>{row.label}</span>
+                  <span style={{fontWeight:600}}>{row.val.toLocaleString()} <span style={{color:C.gray400,fontWeight:400}}>({pct}%)</span></span>
+                </div>
+                <div style={{height:8,background:C.gray200,borderRadius:4}}>
+                  <div style={{height:"100%",width:`${pct}%`,background:row.color,borderRadius:4}}/>
+                </div>
+              </div>
+            );
+          })}
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+// ─── NEW: Visit Management Screen ────────────────────────────
+const MOCK_VISITS = [
+  {id:"v1", buyerName:"Amit Singh", buyerPhone:"+91 98765 12345", property:"3 BHK, Vasant Kunj", date:"2024-04-12", slot:"MORNING", status:"REQUESTED", notes:""},
+  {id:"v2", buyerName:"Priya Mehta", buyerPhone:"+91 99001 23456", property:"2 BHK, Dwarka", date:"2024-04-13", slot:"AFTERNOON", status:"CONFIRMED", notes:"Meet at main gate"},
+  {id:"v3", buyerName:"Suresh Nair", buyerPhone:"+91 88234 56789", property:"Office, CP", date:"2024-04-10", slot:"EVENING", status:"COMPLETED", notes:""},
+  {id:"v4", buyerName:"Neha Kapoor", buyerPhone:"+91 77890 34567", property:"3 BHK, Vasant Kunj", date:"2024-04-15", slot:"MORNING", status:"REQUESTED", notes:""},
+  {id:"v5", buyerName:"Vikram Das", buyerPhone:"+91 91234 56789", property:"Penthouse BKC", date:"2024-04-14", slot:"AFTERNOON", status:"CANCELLED", notes:"Buyer rescheduled"},
+];
+
+function VisitManagementScreen({ setScreen }) {
+  const [filter, setFilter] = useState("ALL");
+  const [selected, setSelected] = useState(null);
+  const [visits, setVisits] = useState(MOCK_VISITS);
+  const statuses = ["ALL","REQUESTED","CONFIRMED","COMPLETED","CANCELLED","NO_SHOW"];
+  const filtered = filter==="ALL" ? visits : visits.filter(v=>v.status===filter);
+  const statusColor = s => ({REQUESTED:"amber",CONFIRMED:"blue",COMPLETED:"green",CANCELLED:"red",NO_SHOW:"gray"}[s]||"gray");
+  const slotIcon = s => ({MORNING:"🌅",AFTERNOON:"☀️",EVENING:"🌆"}[s]||"📅");
+
+  const updateStatus = (id, status) => {
+    setVisits(vs=>vs.map(v=>v.id===id?{...v,status}:v));
+    if(selected?.id===id) setSelected(s=>({...s,status}));
+  };
+
+  return (
+    <div style={{padding:24}}>
+      <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:20}}>
+        <button onClick={()=>setScreen("agent-dash")} style={{background:"none",border:"none",cursor:"pointer",color:C.blue,fontSize:13,fontFamily:"inherit"}}>← Dashboard</button>
+        <h2 style={{fontSize:18,fontWeight:600,margin:0}}>Visit Requests</h2>
+        <div style={{display:"flex",gap:8,marginLeft:"auto"}}>
+          <MetricCard label="Requested" value={visits.filter(v=>v.status==="REQUESTED").length} icon="⏳"/>
+          <MetricCard label="Confirmed" value={visits.filter(v=>v.status==="CONFIRMED").length} icon="✅"/>
+          <MetricCard label="Completed" value={visits.filter(v=>v.status==="COMPLETED").length} icon="🏆"/>
+        </div>
+      </div>
+
+      <div style={{display:"flex",gap:6,marginBottom:16}}>
+        {statuses.map(s=>(
+          <button key={s} onClick={()=>setFilter(s)}
+            style={{padding:"5px 12px",borderRadius:20,border:`1px solid ${filter===s?C.blue:C.gray300}`,
+              background:filter===s?C.blue:"transparent",color:filter===s?"#fff":C.gray600,
+              fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>
+            {s} {s!=="ALL" && `(${visits.filter(v=>v.status===s).length})`}
+          </button>
+        ))}
+      </div>
+
+      <div style={{display:"grid",gridTemplateColumns:selected?"1fr 360px":"1fr",gap:16}}>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:12,alignContent:"start"}}>
+          {filtered.map(v=>(
+            <Card key={v.id} onClick={()=>setSelected(v)}
+              style={{cursor:"pointer",border:`1px solid ${selected?.id===v.id?C.blue:C.gray300}`,transition:"border .15s"}}>
+              <div style={{display:"flex",justifyContent:"space-between",marginBottom:10}}>
+                <Badge color={statusColor(v.status)}>{v.status}</Badge>
+                <span style={{fontSize:12,color:C.gray600}}>{v.date}</span>
+              </div>
+              <div style={{fontWeight:600,marginBottom:4}}>{v.buyerName}</div>
+              <div style={{fontSize:12,color:C.gray600,marginBottom:4}}>{v.buyerPhone}</div>
+              <div style={{fontSize:12,color:C.gray600,marginBottom:10,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>🏠 {v.property}</div>
+              <div style={{display:"flex",alignItems:"center",gap:6}}>
+                <span>{slotIcon(v.slot)}</span>
+                <span style={{fontSize:12,color:C.gray600}}>{v.slot}</span>
+              </div>
+              {v.status==="REQUESTED" && (
+                <div style={{display:"flex",gap:6,marginTop:10}}>
+                  <Btn size="sm" variant="success" fullWidth onClick={e=>{e.stopPropagation();updateStatus(v.id,"CONFIRMED")}}>Confirm</Btn>
+                  <Btn size="sm" style={{color:C.red,borderColor:C.red}} onClick={e=>{e.stopPropagation();updateStatus(v.id,"CANCELLED")}}>Decline</Btn>
+                </div>
+              )}
+            </Card>
+          ))}
+          {filtered.length===0 && (
+            <div style={{gridColumn:"1/-1",textAlign:"center",padding:"60px 0",color:C.gray400}}>
+              <div style={{fontSize:36,marginBottom:12}}>📅</div>
+              <div style={{fontSize:15,color:C.gray600}}>No visits in this status</div>
+            </div>
+          )}
+        </div>
+
+        {selected && (
+          <Card>
+            <div style={{display:"flex",justifyContent:"space-between",marginBottom:16}}>
+              <h3 style={{fontSize:15,fontWeight:600,margin:0}}>Visit Detail</h3>
+              <button onClick={()=>setSelected(null)} style={{background:"none",border:"none",fontSize:18,cursor:"pointer",color:C.gray600}}>✕</button>
+            </div>
+            <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:16}}>
+              <div style={{width:44,height:44,borderRadius:"50%",background:C.blueLight,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,color:C.blue,fontSize:18}}>
+                {selected.buyerName[0]}
+              </div>
+              <div>
+                <div style={{fontWeight:600}}>{selected.buyerName}</div>
+                <div style={{fontSize:12,color:C.gray600}}>{selected.buyerPhone}</div>
+              </div>
+              <Badge color={statusColor(selected.status)} style={{marginLeft:"auto"}}>{selected.status}</Badge>
+            </div>
+            {[["🏠 Property",selected.property],["📅 Date",selected.date],["⏰ Preferred Slot",selected.slot]].map(([l,v])=>(
+              <div key={l} style={{display:"flex",justifyContent:"space-between",padding:"8px 0",borderBottom:`1px solid ${C.gray200}`,fontSize:13}}>
+                <span style={{color:C.gray600}}>{l}</span><span style={{fontWeight:500}}>{v}</span>
+              </div>
+            ))}
+            {selected.notes && (
+              <div style={{background:C.gray100,borderRadius:8,padding:10,marginTop:12,fontSize:12,color:C.gray600}}>
+                📝 {selected.notes}
+              </div>
+            )}
+            <div style={{marginTop:16}}>
+              <div style={{fontSize:12,fontWeight:500,color:C.gray600,marginBottom:8}}>Update status</div>
+              <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+                {["CONFIRMED","COMPLETED","NO_SHOW","CANCELLED"].map(s=>(
+                  <Btn key={s} size="sm"
+                    variant={selected.status===s?"primary":"outline"}
+                    onClick={()=>updateStatus(selected.id,s)}>
+                    {s.replace("_"," ")}
+                  </Btn>
+                ))}
+              </div>
+            </div>
+            <div style={{marginTop:14}}>
+              <Input label="Agent notes" placeholder="Add internal notes…" rows={2}/>
+            </div>
+            <Btn variant="primary" fullWidth>Save Changes</Btn>
+          </Card>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── NEW: Agent Public Profile ─────────────────────────────────
+function AgentPublicProfile({ agent=AGENTS[0], setScreen, setDetailProp }) {
+  const agentProps = PROPERTIES.filter(p=>p.agent.company===agent.company);
+  return (
+    <div style={{padding:24,maxWidth:1000,margin:"0 auto"}}>
+      <button onClick={()=>setScreen("search")} style={{background:"none",border:"none",cursor:"pointer",color:C.blue,fontSize:13,fontFamily:"inherit",marginBottom:16}}>← Back</button>
+
+      {/* Profile hero */}
+      <Card style={{marginBottom:20}}>
+        <div style={{display:"flex",gap:20,alignItems:"flex-start"}}>
+          <div style={{width:80,height:80,borderRadius:12,background:C.blueLight,display:"flex",alignItems:"center",justifyContent:"center",fontSize:30,fontWeight:700,color:C.blue,flexShrink:0}}>
+            {agent.company[0]}
+          </div>
+          <div style={{flex:1}}>
+            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}>
+              <h1 style={{fontSize:22,fontWeight:700,margin:0}}>{agent.company}</h1>
+              {agent.status==="Active" && <span style={{color:C.blue,fontSize:16}}>✓</span>}
+              <Badge color={agent.plan==="Premium"?"blue":agent.plan==="Pro"?"purple":"gray"}>{agent.plan}</Badge>
+            </div>
+            <div style={{fontSize:13,color:C.gray600,marginBottom:8}}>{agent.name} · {agent.city}</div>
+            <div style={{fontSize:13,color:C.gray600,lineHeight:1.6,marginBottom:12}}>
+              Expert real estate agent specialising in residential and commercial properties across {agent.city}.
+              Over {Math.floor(Math.random()*10+5)} years of experience helping clients buy, sell, and rent properties.
+            </div>
+            <div style={{display:"flex",gap:16,fontSize:13}}>
+              <div style={{textAlign:"center"}}>
+                <div style={{fontWeight:700,fontSize:18,color:C.blue}}>{agent.listings}</div>
+                <div style={{color:C.gray600,fontSize:11}}>Total Listings</div>
+              </div>
+              <div style={{textAlign:"center"}}>
+                <div style={{fontWeight:700,fontSize:18,color:C.green}}>{agent.active}</div>
+                <div style={{color:C.gray600,fontSize:11}}>Active</div>
+              </div>
+              <div style={{textAlign:"center"}}>
+                <div style={{fontWeight:700,fontSize:18,color:C.amber}}>{Math.floor(Math.random()*50+20)}</div>
+                <div style={{color:C.gray600,fontSize:11}}>Deals Closed</div>
+              </div>
+              <div style={{textAlign:"center"}}>
+                <div style={{fontWeight:700,fontSize:18}}>{agent.joined}</div>
+                <div style={{color:C.gray600,fontSize:11}}>Member Since</div>
+              </div>
+            </div>
+          </div>
+          <div style={{display:"flex",flexDirection:"column",gap:8,minWidth:140}}>
+            <Btn variant="primary" icon="📞">Call Agent</Btn>
+            <Btn icon="💬" style={{background:"#25D366",color:"#fff",borderColor:"#25D366"}}>WhatsApp</Btn>
+            <Btn icon="✉️">Email</Btn>
+          </div>
+        </div>
+        {agent.license && (
+          <div style={{marginTop:14,padding:"10px 14px",background:C.gray100,borderRadius:8,display:"flex",gap:20,fontSize:12,color:C.gray600}}>
+            <span>📋 License: <strong>{agent.license}</strong></span>
+            <span>🏛 RERA: <strong>RERA/{agent.city[0]}S/{Math.floor(Math.random()*9999).toString().padStart(4,"0")}</strong></span>
+            <span>📍 Specializes in: <strong>{agent.city}</strong></span>
+          </div>
+        )}
+      </Card>
+
+      {/* Listings */}
+      <h2 style={{fontSize:16,fontWeight:600,marginBottom:14}}>Properties by {agent.company} ({agentProps.length})</h2>
+      {agentProps.length > 0 ? (
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:16}}>
+          {agentProps.map(p=>(
+            <PropertyCard key={p.id} prop={p} favs={[]}
+              onView={prop=>{setDetailProp(prop);setScreen("detail");}}
+              onFav={()=>{}}/>
+          ))}
+        </div>
+      ) : (
+        <Card style={{textAlign:"center",padding:40,color:C.gray400}}>
+          <div style={{fontSize:32,marginBottom:12}}>🏠</div>
+          <div>No listings available from this agent yet.</div>
+        </Card>
+      )}
+    </div>
+  );
+}
+
+// ─── NEW: Property Comparison ──────────────────────────────────
+function PropertyCompareScreen({ setScreen, setDetailProp }) {
+  const [selected, setSelected] = useState([PROPERTIES[0], PROPERTIES[3]]);
+
+  const addProp = (p) => {
+    if (selected.find(s=>s.id===p.id) || selected.length>=3) return;
+    setSelected(s=>[...s,p]);
+  };
+  const removeProp = (id) => setSelected(s=>s.filter(p=>p.id!==id));
+
+  const rows = [
+    ["Price",         p=>p.priceLabel],
+    ["Type",          p=>p.type],
+    ["Purpose",       p=>p.purpose],
+    ["Bedrooms",      p=>p.beds>0?`${p.beds} BHK`:"N/A"],
+    ["Bathrooms",     p=>p.baths||"N/A"],
+    ["Area",          p=>`${p.area?.toLocaleString()} ft²`],
+    ["Floor",         p=>p.floor>0?`${p.floor}/${p.totalFloors}`:"N/A"],
+    ["Build Year",    p=>p.buildYear||"N/A"],
+    ["Furnishing",    p=>p.furnishing],
+    ["City",          p=>p.city],
+    ["Agent",         p=>p.agent.company],
+    ["Verified",      p=>p.agent.verified?"✅ Yes":"❌ No"],
+    ["Featured",      p=>p.featured?"⭐ Yes":"No"],
+  ];
+
+  return (
+    <div style={{padding:24}}>
+      <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:20}}>
+        <button onClick={()=>setScreen("search")} style={{background:"none",border:"none",cursor:"pointer",color:C.blue,fontSize:13,fontFamily:"inherit"}}>← Search</button>
+        <h2 style={{fontSize:18,fontWeight:600,margin:0}}>Compare Properties</h2>
+        <span style={{fontSize:12,color:C.gray600}}>Select up to 3 properties side-by-side</span>
+      </div>
+
+      {/* Selector */}
+      <Card style={{marginBottom:20}}>
+        <h3 style={{fontSize:14,fontWeight:500,margin:"0 0 12px",color:C.gray600}}>Add a property to compare</h3>
+        <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+          {PROPERTIES.filter(p=>!selected.find(s=>s.id===p.id)).map(p=>(
+            <button key={p.id} onClick={()=>addProp(p)}
+              style={{padding:"5px 12px",borderRadius:8,border:`1px solid ${C.gray300}`,background:C.white,
+                cursor:selected.length>=3?"not-allowed":"pointer",fontSize:12,fontFamily:"inherit",
+                opacity:selected.length>=3?0.5:1}}>
+              + {p.title.slice(0,28)}…
+            </button>
+          ))}
+        </div>
+      </Card>
+
+      {/* Comparison table */}
+      {selected.length<2 ? (
+        <div style={{textAlign:"center",padding:"60px 20px",color:C.gray400}}>
+          <div style={{fontSize:40,marginBottom:12}}>⚖️</div>
+          <div style={{fontSize:15,color:C.gray600}}>Select at least 2 properties to compare</div>
+        </div>
+      ) : (
+        <div style={{overflowX:"auto"}}>
+          <table style={{width:"100%",borderCollapse:"collapse",minWidth:500}}>
+            <thead>
+              <tr style={{background:C.white}}>
+                <th style={{padding:"12px 16px",textAlign:"left",fontSize:12,fontWeight:500,color:C.gray600,width:130,borderBottom:`1px solid ${C.gray200}`}}>Feature</th>
+                {selected.map(p=>(
+                  <th key={p.id} style={{padding:"12px 16px",borderBottom:`1px solid ${C.gray200}`,minWidth:200}}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
+                      <div>
+                        <div style={{height:60,background:`linear-gradient(${p.gradient})`,borderRadius:8,marginBottom:8,display:"flex",alignItems:"center",justifyContent:"center",fontSize:24}}>{p.icon}</div>
+                        <div style={{fontSize:13,fontWeight:600,textAlign:"left",lineHeight:1.3}}>{p.title}</div>
+                        <div style={{fontSize:16,fontWeight:700,color:C.blue,marginTop:4}}>{p.priceLabel}</div>
+                      </div>
+                      <button onClick={()=>removeProp(p.id)} style={{background:"none",border:"none",cursor:"pointer",fontSize:16,color:C.gray400,marginLeft:8,flexShrink:0}}>✕</button>
+                    </div>
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map(([label, getter], ri)=>(
+                <tr key={label} style={{background:ri%2===0?C.gray100:"#fff"}}>
+                  <td style={{padding:"10px 16px",fontSize:12,fontWeight:500,color:C.gray600}}>{label}</td>
+                  {selected.map(p=>(
+                    <td key={p.id} style={{padding:"10px 16px",fontSize:13,fontWeight:500}}>
+                      {getter(p)}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+              <tr style={{background:C.white}}>
+                <td style={{padding:"12px 16px",fontSize:12,color:C.gray600}}>Action</td>
+                {selected.map(p=>(
+                  <td key={p.id} style={{padding:"12px 16px"}}>
+                    <Btn variant="primary" size="sm" onClick={()=>{setDetailProp(p);setScreen("detail");}}>View Full Details</Btn>
+                  </td>
+                ))}
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── NEW: Notification Center ──────────────────────────────────
+const MOCK_NOTIFS = [
+  {id:"n1",type:"NEW_LEAD",title:"New lead on 3 BHK, Vasant Kunj",body:"Amit Singh (+91 98765 12345) has enquired about your listing.",read:false,time:"2 min ago",icon:"👤"},
+  {id:"n2",type:"VISIT_REQUEST",title:"Visit request received",body:"Priya Mehta wants to visit 2 BHK, Dwarka on Apr 13 (Afternoon).",read:false,time:"1 hour ago",icon:"📅"},
+  {id:"n3",type:"LISTING_APPROVED",title:"Listing approved ✅",body:"Your listing '3 BHK Flat, Vasant Kunj' is now live on PropVault.",read:true,time:"Yesterday",icon:"🏠"},
+  {id:"n4",type:"PAYMENT_SUCCESS",title:"Payment successful",body:"Your Pro Plan subscription has been renewed. Invoice INV-2024-000342 is available.",read:true,time:"2 days ago",icon:"💳"},
+  {id:"n5",type:"NEW_LEAD",title:"New lead on Office Space, CP",body:"Suresh Nair (+91 88234 56789) is interested in your commercial property.",read:true,time:"3 days ago",icon:"👤"},
+  {id:"n6",type:"LISTING_REJECTED",title:"Listing needs revision",body:"'Commercial Shop' was rejected: Please add clearer photos and complete the address.",read:true,time:"4 days ago",icon:"⚠️"},
+];
+
+function NotificationCenter({ setScreen }) {
+  const [notifs, setNotifs] = useState(MOCK_NOTIFS);
+  const unread = notifs.filter(n=>!n.read).length;
+  const markAll = () => setNotifs(ns=>ns.map(n=>({...n,read:true})));
+  const markOne = (id) => setNotifs(ns=>ns.map(n=>n.id===id?{...n,read:true}:n));
+  const typeColor = t => ({NEW_LEAD:"blue",VISIT_REQUEST:"purple",LISTING_APPROVED:"green",PAYMENT_SUCCESS:"green",LISTING_REJECTED:"red"}[t]||"gray");
+
+  return (
+    <div style={{padding:24,maxWidth:680,margin:"0 auto"}}>
+      <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:20}}>
+        <button onClick={()=>setScreen("agent-dash")} style={{background:"none",border:"none",cursor:"pointer",color:C.blue,fontSize:13,fontFamily:"inherit"}}>← Dashboard</button>
+        <h2 style={{fontSize:18,fontWeight:600,margin:0}}>Notifications</h2>
+        {unread>0 && <Badge color="red">{unread} unread</Badge>}
+        {unread>0 && <button onClick={markAll} style={{marginLeft:"auto",background:"none",border:"none",cursor:"pointer",color:C.blue,fontSize:13,fontFamily:"inherit"}}>Mark all read</button>}
+      </div>
+      <div style={{display:"flex",flexDirection:"column",gap:8}}>
+        {notifs.map(n=>(
+          <Card key={n.id} onClick={()=>markOne(n.id)}
+            style={{cursor:"pointer",borderLeft:`3px solid ${n.read?C.gray300:C[typeColor(n.type)+"Light"]||C.blueLight}`,
+              background:n.read?C.white:C.blueLight,transition:"background .2s"}}>
+            <div style={{display:"flex",gap:12,alignItems:"flex-start"}}>
+              <div style={{width:38,height:38,borderRadius:"50%",background:n.read?C.gray200:C.blueLight,
+                display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0}}>
+                {n.icon}
+              </div>
+              <div style={{flex:1}}>
+                <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
+                  <span style={{fontSize:13,fontWeight:n.read?500:700,color:C.gray800}}>{n.title}</span>
+                  <span style={{fontSize:11,color:C.gray400,whiteSpace:"nowrap",marginLeft:12}}>{n.time}</span>
+                </div>
+                <div style={{fontSize:12,color:C.gray600,lineHeight:1.5}}>{n.body}</div>
+                <div style={{marginTop:6}}>
+                  <Badge color={typeColor(n.type)} small>{n.type.replace(/_/g," ")}</Badge>
+                </div>
+              </div>
+              {!n.read && <div style={{width:8,height:8,borderRadius:"50%",background:C.blue,flexShrink:0,marginTop:4}}/>}
+            </div>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── NEW: Featured Listing Management ─────────────────────────
+function FeaturedManagementScreen({ setScreen }) {
+  const [props, setProps] = useState(PROPERTIES.map(p=>({...p})));
+  const plan = {maxFeatured:5};
+  const featuredCount = props.filter(p=>p.featured).length;
+  const remaining = plan.maxFeatured - featuredCount;
+
+  const toggle = (id) => {
+    const prop = props.find(p=>p.id===id);
+    if (!prop.featured && remaining<=0) {
+      alert(`Featured slot limit reached (${plan.maxFeatured}). Upgrade to Premium for unlimited featured slots.`);
+      return;
+    }
+    setProps(ps=>ps.map(p=>p.id===id?{...p,featured:!p.featured}:p));
+  };
+
+  return (
+    <div style={{padding:24}}>
+      <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:20}}>
+        <button onClick={()=>setScreen("my-props")} style={{background:"none",border:"none",cursor:"pointer",color:C.blue,fontSize:13,fontFamily:"inherit"}}>← My Listings</button>
+        <h2 style={{fontSize:18,fontWeight:600,margin:0}}>Featured Listings</h2>
+      </div>
+
+      {/* Usage banner */}
+      <div style={{background:`linear-gradient(135deg,${C.blue},${C.blueDark})`,borderRadius:12,padding:20,color:"#fff",marginBottom:20}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+          <div>
+            <div style={{fontSize:16,fontWeight:600}}>Featured Slot Usage</div>
+            <div style={{fontSize:12,opacity:.8}}>Pro Plan · Featured listings appear at top of search results</div>
+          </div>
+          <div style={{textAlign:"right"}}>
+            <div style={{fontSize:28,fontWeight:700}}>{featuredCount} / {plan.maxFeatured}</div>
+            <div style={{fontSize:12,opacity:.8}}>{remaining} slots remaining</div>
+          </div>
+        </div>
+        <div style={{height:8,background:"rgba(255,255,255,.2)",borderRadius:4}}>
+          <div style={{height:"100%",width:`${(featuredCount/plan.maxFeatured)*100}%`,background:"#fff",borderRadius:4,transition:"width .4s"}}/>
+        </div>
+        {remaining===0 && (
+          <div style={{marginTop:10,fontSize:12,opacity:.9}}>
+            ⚠️ All slots used. <button onClick={()=>setScreen("subscription")} style={{background:"none",border:"none",cursor:"pointer",color:"#fff",fontFamily:"inherit",fontWeight:700,textDecoration:"underline",fontSize:12}}>Upgrade to Premium</button> for unlimited featured slots.
+          </div>
+        )}
+      </div>
+
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(300px,1fr))",gap:14}}>
+        {props.filter(p=>p.status==="APPROVED").map(p=>(
+          <Card key={p.id} style={{position:"relative",border:`1px solid ${p.featured?C.blue:C.gray300}`}}>
+            {p.featured && <div style={{position:"absolute",top:-1,right:16,background:C.blueLight,color:C.blue,fontSize:10,padding:"2px 10px",borderRadius:"0 0 8px 8px",fontWeight:600}}>⭐ Featured</div>}
+            <div style={{display:"flex",gap:12,alignItems:"flex-start"}}>
+              <div style={{width:52,height:52,borderRadius:8,background:`linear-gradient(${p.gradient})`,
+                display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0}}>{p.icon}</div>
+              <div style={{flex:1}}>
+                <div style={{fontSize:13,fontWeight:600,marginBottom:2}}>{p.title}</div>
+                <div style={{fontSize:12,color:C.blue,fontWeight:600,marginBottom:4}}>{p.priceLabel}</div>
+                <div style={{fontSize:11,color:C.gray600}}>{p.locality}, {p.city} · 👁 {p.views} views</div>
+              </div>
+            </div>
+            <div style={{marginTop:12,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+              <Badge color={p.purpose==="SALE"?"blue":"green"} small>{p.purpose}</Badge>
+              <div style={{display:"flex",alignItems:"center",gap:10}}>
+                <span style={{fontSize:12,color:C.gray600}}>{p.featured?"Remove featured":"Make featured"}</span>
+                <div onClick={()=>toggle(p.id)}
+                  style={{width:40,height:22,background:p.featured?C.blue:C.gray300,borderRadius:11,cursor:"pointer",
+                    position:"relative",transition:"background .2s"}}>
+                  <div style={{position:"absolute",top:3,left:p.featured?"auto":3,right:p.featured?3:"auto",
+                    width:16,height:16,background:"#fff",borderRadius:"50%",transition:"all .2s"}}/>
+                </div>
+              </div>
+            </div>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── NEW: Forgot Password Screen ──────────────────────────────
+function ForgotPasswordScreen({ setScreen }) {
+  const [step, setStep] = useState(0); // 0=email, 1=sent, 2=reset
+  const [email, setEmail] = useState("");
+  const [token, setToken] = useState("");
+  const [newPass, setNewPass] = useState("");
+  const [confPass, setConfPass] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleSend = () => {
+    if (!email || !email.includes("@")) { alert("Enter valid email"); return; }
+    setLoading(true);
+    setTimeout(()=>{ setLoading(false); setStep(1); }, 1200);
+  };
+
+  const handleReset = () => {
+    if (!token) { alert("Enter the OTP sent to your email"); return; }
+    if (newPass.length < 8) { alert("Password must be at least 8 characters"); return; }
+    if (newPass !== confPass) { alert("Passwords do not match"); return; }
+    setLoading(true);
+    setTimeout(()=>{ setLoading(false); setStep(3); }, 1200);
+  };
+
+  return (
+    <div style={{padding:40,maxWidth:440,margin:"60px auto"}}>
+      <div style={{textAlign:"center",marginBottom:28}}>
+        <div style={{fontSize:28,fontWeight:700,color:C.gray800,marginBottom:4}}>
+          <span style={{color:C.blue}}>Prop</span>Vault
+        </div>
+        {step===0 && <><h2 style={{fontSize:20,fontWeight:600,margin:"16px 0 6px"}}>Forgot your password?</h2><p style={{color:C.gray600,fontSize:14}}>Enter your email and we'll send you a reset link.</p></>}
+        {step===1 && <><h2 style={{fontSize:20,fontWeight:600,margin:"16px 0 6px"}}>Check your inbox 📬</h2><p style={{color:C.gray600,fontSize:14}}>We sent a 6-digit OTP to <strong>{email}</strong>. Enter it below.</p></>}
+        {step===3 && <><h2 style={{fontSize:20,fontWeight:600,margin:"16px 0 6px"}}>Password reset! ✅</h2><p style={{color:C.gray600,fontSize:14}}>Your password has been updated. You can now sign in.</p></>}
+      </div>
+
+      <Card>
+        {step===0 && <>
+          <Input label="Email address" type="email" placeholder="you@email.com" value={email} onChange={e=>setEmail(e.target.value)} required />
+          <Btn variant="primary" fullWidth onClick={handleSend} disabled={loading}>{loading?"Sending…":"Send Reset Link"}</Btn>
+        </>}
+        {step===1 && <>
+          <Input label="OTP (6 digits)" type="text" placeholder="123456" value={token} onChange={e=>setToken(e.target.value)} required />
+          <Input label="New password" type="password" placeholder="Min 8 characters" value={newPass} onChange={e=>setNewPass(e.target.value)} required />
+          <Input label="Confirm password" type="password" placeholder="Repeat password" value={confPass} onChange={e=>setConfPass(e.target.value)} required />
+          <Btn variant="primary" fullWidth onClick={handleReset} disabled={loading}>{loading?"Resetting…":"Reset Password"}</Btn>
+          <div style={{textAlign:"center",marginTop:10}}>
+            <button onClick={()=>setStep(0)} style={{background:"none",border:"none",cursor:"pointer",color:C.blue,fontSize:12,fontFamily:"inherit"}}>← Try different email</button>
+          </div>
+        </>}
+        {step===3 && <Btn variant="primary" fullWidth onClick={()=>setScreen("search")}>Go to Sign In</Btn>}
+      </Card>
+      <div style={{textAlign:"center",marginTop:16}}>
+        <button onClick={()=>setScreen("search")} style={{background:"none",border:"none",cursor:"pointer",color:C.blue,fontSize:13,fontFamily:"inherit"}}>← Back to login</button>
+      </div>
+    </div>
+  );
+}
+
+// ─── UPDATED: Topbar — auth-aware, logout, user avatar, Revenue nav ─
+function Topbar({ role, setRole, screen, setScreen, notifCount=0, user, onLogout, isLoggedIn }) {
+  const [showUserMenu, setShowUserMenu] = useState(false);
+
+  const roleNavs = {
+    buyer: [
+      { id:"buyer-dash",  label:"Dashboard" },
+      { id:"search",      label:"🔍 Search" },
+      { id:"compare",     label:"Compare" },
+      { id:"map-search",  label:"🗺 Map View" },
+      { id:"favorites",   label:"❤️ Saved" },
+    ],
+    agent: [
+      { id:"agent-dash",   label:"Dashboard" },
+      { id:"analytics",    label:"Analytics" },
+      { id:"my-props",     label:"Listings" },
+      { id:"featured",     label:"⭐ Featured" },
+      { id:"leads",        label:"Leads" },
+      { id:"visits",       label:"Visits" },
+      { id:"subscription", label:"Plan" },
+    ],
+    admin: [
+      { id:"admin-dash",     label:"Overview" },
+      { id:"admin-agents",   label:"Agents" },
+      { id:"admin-listings", label:"Listings" },
+      { id:"admin-subs",     label:"Subscriptions" },
+      { id:"admin-revenue",  label:"💰 Revenue" },
+      { id:"admin-users",    label:"👥 Users" },
+      { id:"admin-settings", label:"⚙️ Settings" },
+    ],
+  };
+
+  const userInitial = user?.name?.[0]?.toUpperCase() || (role==="admin"?"A":role==="agent"?"AG":"B");
+  const userName    = user?.name || (role==="admin"?"Admin User":role==="agent"?"Deepak Sharma":"Amit Mehta");
+  const userEmail   = user?.email|| (role==="admin"?"admin@propvault.in":role==="agent"?"agent@propvault.in":"buyer@propvault.in");
+
+  return (
+    <div style={{ background:C.white, borderBottom:`1px solid ${C.gray300}`, padding:"0 24px",
+      height:54, display:"flex", alignItems:"center", gap:12, position:"sticky", top:0, zIndex:100 }}>
+
+      {/* Logo */}
+      <div style={{ fontSize:18, fontWeight:800, color:C.gray800, marginRight:4, cursor:"pointer", flexShrink:0 }}
+        onClick={()=>setScreen(role==="buyer"?"search":role==="agent"?"agent-dash":"admin-dash")}>
+        <span style={{color:C.blue}}>Prop</span>Vault
+      </div>
+
+      {/* Nav links */}
+      {isLoggedIn && (
+        <div style={{ display:"flex", gap:1, flex:1, overflowX:"auto" }}>
+          {(roleNavs[role]||[]).map(n => (
+            <button key={n.id} onClick={() => setScreen(n.id)}
+              style={{ padding:"6px 11px", borderRadius:8, border:"none", cursor:"pointer",
+                background: screen===n.id ? C.blueLight : "transparent",
+                color: screen===n.id ? C.blue : C.gray600,
+                fontWeight: screen===n.id ? 600 : 400,
+                fontSize:13, fontFamily:"inherit", transition:"all .15s", whiteSpace:"nowrap" }}>
+              {n.label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {!isLoggedIn && <div style={{flex:1}} />}
+
+      {/* Right side */}
+      <div style={{ display:"flex", alignItems:"center", gap:8, flexShrink:0 }}>
+
+        {!isLoggedIn ? (
+          /* Guest: Sign In button */
+          <Btn variant="primary" onClick={()=>setScreen("auth")}>Sign In</Btn>
+        ) : (
+          <>
+            {/* Notification bell */}
+            <button onClick={()=>setScreen("notifications")}
+              style={{ position:"relative", background:"none", border:"none",
+                cursor:"pointer", padding:"5px 6px", borderRadius:8 }}>
+              <span style={{fontSize:20}}>🔔</span>
+              {notifCount > 0 && (
+                <span style={{ position:"absolute", top:2, right:2, width:16, height:16,
+                  background:C.red, borderRadius:"50%", fontSize:10, color:"#fff",
+                  display:"flex", alignItems:"center", justifyContent:"center", fontWeight:700 }}>
+                  {notifCount}
+                </span>
+              )}
+            </button>
+
+            {/* User avatar menu */}
+            <div style={{ position:"relative" }}>
+              <button onClick={()=>setShowUserMenu(v=>!v)}
+                style={{ display:"flex", alignItems:"center", gap:8, background:"none",
+                  border:`1px solid ${C.gray300}`, borderRadius:8, cursor:"pointer",
+                  padding:"5px 10px", fontFamily:"inherit" }}>
+                <div style={{ width:26, height:26, borderRadius:"50%", background:C.blueLight,
+                  display:"flex", alignItems:"center", justifyContent:"center",
+                  fontWeight:700, color:C.blue, fontSize:12 }}>{userInitial}</div>
+                <span style={{ fontSize:13, fontWeight:500, color:C.gray800 }}>{userName.split(" ")[0]}</span>
+                <span style={{ fontSize:10, color:C.gray400 }}>▼</span>
+              </button>
+
+              {showUserMenu && (
+                <div style={{ position:"absolute", top:"calc(100% + 6px)", right:0,
+                  background:C.white, border:`1px solid ${C.gray300}`, borderRadius:12,
+                  boxShadow:"0 8px 30px rgba(0,0,0,.12)", padding:8, minWidth:200, zIndex:200 }}>
+
+                  {/* User info header */}
+                  <div style={{ padding:"10px 12px 12px", borderBottom:`1px solid ${C.gray200}`, marginBottom:6 }}>
+                    <div style={{ fontWeight:600, fontSize:14 }}>{userName}</div>
+                    <div style={{ fontSize:12, color:C.gray400 }}>{userEmail}</div>
+                    <Badge color={role==="admin"?"red":role==="agent"?"blue":"green"} small style={{marginTop:4}}>
+                      {role==="admin"?"Super Admin":role==="agent"?"Agent":"Buyer"}
+                    </Badge>
+                  </div>
+
+                  {/* Menu items */}
+                  {[
+                    role==="agent" && { label:"My Profile",     icon:"👤", screen:"agent-my-profile" },
+                    role==="agent" && { label:"Edit Profile",    icon:"✏️", screen:"agent-profile-edit" },
+                    role==="agent" && { label:"Subscription",    icon:"💳", screen:"subscription" },
+                    { label:"Notifications", icon:"🔔", screen:"notifications" },
+                  ].filter(Boolean).map(item=>(
+                    <button key={item.screen} onClick={()=>{ setScreen(item.screen); setShowUserMenu(false); }}
+                      style={{ display:"flex", alignItems:"center", gap:10, width:"100%",
+                        padding:"9px 12px", background:"none", border:"none", cursor:"pointer",
+                        borderRadius:8, fontFamily:"inherit", fontSize:13, color:C.gray700,
+                        textAlign:"left", transition:"background .1s" }}
+                      onMouseEnter={e=>e.currentTarget.style.background=C.gray100}
+                      onMouseLeave={e=>e.currentTarget.style.background="none"}>
+                      <span>{item.icon}</span>{item.label}
+                    </button>
+                  ))}
+
+                  <div style={{ borderTop:`1px solid ${C.gray200}`, marginTop:6, paddingTop:6 }}>
+                    <button onClick={()=>{ onLogout(); setShowUserMenu(false); }}
+                      style={{ display:"flex", alignItems:"center", gap:10, width:"100%",
+                        padding:"9px 12px", background:"none", border:"none", cursor:"pointer",
+                        borderRadius:8, fontFamily:"inherit", fontSize:13, color:C.red,
+                        textAlign:"left" }}
+                      onMouseEnter={e=>e.currentTarget.style.background=C.redLight}
+                      onMouseLeave={e=>e.currentTarget.style.background="none"}>
+                      <span>🚪</span>Sign Out
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Role switcher (demo only — shown as subtle pill) */}
+            <div style={{ display:"flex", background:C.gray100, borderRadius:8, padding:3, gap:1 }}>
+              {["buyer","agent","admin"].map(r => (
+                <button key={r} onClick={()=>{ setRole(r); setShowUserMenu(false);
+                  setScreen(r==="buyer"?"search":r==="agent"?"agent-dash":"admin-dash"); }}
+                  style={{ padding:"3px 9px", borderRadius:6, border:"none", cursor:"pointer",
+                    background: role===r ? C.white : "transparent",
+                    color: role===r ? C.gray800 : C.gray400,
+                    fontWeight: role===r ? 600 : 400, fontSize:11, fontFamily:"inherit",
+                    boxShadow: role===r ? "0 1px 3px rgba(0,0,0,.1)" : "none" }}
+                  title={`Switch to ${r} view`}>
+                  {r==="buyer"?"🏠":r==="agent"?"🏢":"⚙️"}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Close user menu on outside click */}
+      {showUserMenu && (
+        <div style={{ position:"fixed", inset:0, zIndex:199 }}
+          onClick={()=>setShowUserMenu(false)} />
+      )}
+    </div>
+  );
+}
+
+// ─── NEW: Map Search Screen (placeholder + property pins) ──────
+function MapSearchScreen({ setScreen, setDetailProp }) {
+  const [active, setActive] = useState(null);
+  return (
+    <div style={{padding:24}}>
+      <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:16}}>
+        <button onClick={()=>setScreen("search")} style={{background:"none",border:"none",cursor:"pointer",color:C.blue,fontSize:13,fontFamily:"inherit"}}>← List View</button>
+        <h2 style={{fontSize:18,fontWeight:600,margin:0}}>Map Search</h2>
+        <span style={{fontSize:12,color:C.gray600}}>{PROPERTIES.length} properties in view</span>
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 340px",gap:16,height:"calc(100vh - 160px)"}}>
+        {/* Map placeholder */}
+        <div style={{background:C.gray100,borderRadius:12,position:"relative",overflow:"hidden",
+          border:`1px solid ${C.gray300}`,display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:8}}>
+          {/* Simulated map */}
+          <div style={{position:"absolute",inset:0,background:"linear-gradient(135deg,#E8F4F8 0%,#D4EAD8 50%,#F0E8D0 100%)"}}>
+            {/* Fake roads */}
+            <svg width="100%" height="100%" style={{position:"absolute",top:0,left:0}}>
+              <line x1="0" y1="40%" x2="100%" y2="40%" stroke="#C8D8C8" strokeWidth="12"/>
+              <line x1="0" y1="65%" x2="100%" y2="65%" stroke="#C8D8C8" strokeWidth="8"/>
+              <line x1="30%" y1="0" x2="30%" y2="100%" stroke="#C8D8C8" strokeWidth="10"/>
+              <line x1="70%" y1="0" x2="70%" y2="100%" stroke="#C8D8C8" strokeWidth="6"/>
+              <line x1="0" y1="40%" x2="100%" y2="40%" stroke="#D8E8D8" strokeWidth="2"/>
+            </svg>
+            {/* Property pins */}
+            {PROPERTIES.map((p,i)=>{
+              const positions = [{top:"25%",left:"22%"},{top:"55%",left:"60%"},{top:"38%",left:"72%"},{top:"15%",left:"50%"},{top:"70%",left:"35%"},{top:"45%",left:"18%"}];
+              const pos = positions[i]||{top:"50%",left:"50%"};
+              return (
+                <div key={p.id} onClick={()=>setActive(p)}
+                  style={{position:"absolute",...pos,transform:"translate(-50%,-100%)",cursor:"pointer",zIndex:active?.id===p.id?10:1}}>
+                  <div style={{background:active?.id===p.id?C.blueDark:C.blue,color:"#fff",
+                    padding:"4px 8px",borderRadius:6,fontSize:11,fontWeight:700,whiteSpace:"nowrap",
+                    boxShadow:"0 2px 8px rgba(0,0,0,.2)"}}>
+                    {p.priceLabel}
+                    {p.featured && " ⭐"}
+                  </div>
+                  <div style={{width:0,height:0,borderLeft:"6px solid transparent",borderRight:"6px solid transparent",
+                    borderTop:`8px solid ${active?.id===p.id?C.blueDark:C.blue}`,margin:"0 auto"}}/>
+                </div>
+              );
+            })}
+            <div style={{position:"absolute",bottom:16,right:16,background:"#fff",borderRadius:8,padding:"6px 10px",fontSize:12,color:C.gray600,border:`1px solid ${C.gray300}`}}>
+              📍 Delhi NCR
+            </div>
+            <div style={{position:"absolute",top:16,left:16,display:"flex",flexDirection:"column",gap:4}}>
+              {["＋","−"].map(s=>(
+                <div key={s} style={{width:30,height:30,background:"#fff",borderRadius:6,border:`1px solid ${C.gray300}`,
+                  display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",fontSize:16,fontWeight:700,color:C.gray600}}>
+                  {s}
+                </div>
+              ))}
+            </div>
+          </div>
+          {!active && <div style={{position:"absolute",bottom:60,left:"50%",transform:"translateX(-50%)",
+            background:"rgba(255,255,255,.95)",borderRadius:8,padding:"8px 16px",fontSize:13,color:C.gray600,boxShadow:"0 2px 8px rgba(0,0,0,.1)"}}>
+            Click a price pin to see property details
+          </div>}
+        </div>
+
+        {/* Side panel */}
+        <div style={{overflowY:"auto",display:"flex",flexDirection:"column",gap:10}}>
+          {(active ? [active,...PROPERTIES.filter(p=>p.id!==active.id)] : PROPERTIES).map(p=>(
+            <Card key={p.id} onClick={()=>setActive(p)}
+              style={{cursor:"pointer",border:`1px solid ${active?.id===p.id?C.blue:C.gray300}`,
+                background:active?.id===p.id?C.blueLight:"#fff",padding:"12px 14px",transition:"all .15s"}}>
+              <div style={{display:"flex",gap:10,alignItems:"center"}}>
+                <div style={{width:44,height:44,borderRadius:8,background:`linear-gradient(${p.gradient})`,
+                  display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0}}>{p.icon}</div>
+                <div style={{flex:1,overflow:"hidden"}}>
+                  <div style={{fontSize:13,fontWeight:600,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{p.title}</div>
+                  <div style={{fontSize:14,fontWeight:700,color:C.blue}}>{p.priceLabel}</div>
+                  <div style={{fontSize:11,color:C.gray600}}>📍 {p.locality}, {p.city}</div>
+                </div>
+              </div>
+              {active?.id===p.id && (
+                <Btn variant="primary" size="sm" fullWidth style={{marginTop:10}}
+                  onClick={()=>{setDetailProp(p);setScreen("detail");}}>
+                  View Full Details
+                </Btn>
+              )}
+            </Card>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+// ═══════════════════════════════════════════════════════════════
+// NEW SCREENS — Login/Register, Agent Profile Edit,
+//              Admin Revenue Analytics, Visit Scheduling Modal
+// ═══════════════════════════════════════════════════════════════
+
+// ─── BUYER: Dashboard ──────────────────────────────────────────
+/**
+ * Personal home screen for logged-in buyers.
+ * Shows: activity summary, recent enquiries, saved properties snapshot,
+ * scheduled visits, and personalised property recommendations.
+ */
+function BuyerDashboard({ setScreen, setDetailProp, favs, setFavs }) {
+  const savedProps  = PROPERTIES.filter(p => favs.includes(p.id));
+  const myLeads     = LEADS.slice(0, 3);
+  const myVisits    = MOCK_VISITS.slice(0, 3);
+  const recommended = PROPERTIES.filter(p => !favs.includes(p.id)).slice(0, 3);
+
+  const statusColor = s => ({
+    NEW:"blue", FOLLOW_UP:"amber", VISIT_SCHEDULED:"purple",
+    CONFIRMED:"blue", COMPLETED:"green", CANCELLED:"red",
+    CLOSED_WON:"green", CLOSED_LOST:"red",
+  }[s] || "gray");
+
+  return (
+    <div style={{ padding:24 }}>
+      {/* Welcome banner */}
+      <div style={{ background:`linear-gradient(135deg,${C.blue},${C.blueDark})`,
+        borderRadius:14, padding:"22px 28px", color:"#fff", marginBottom:20,
+        display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+        <div>
+          <div style={{ fontSize:20, fontWeight:700, marginBottom:4 }}>
+            Welcome back, Amit 👋
+          </div>
+          <div style={{ fontSize:13, opacity:.85 }}>
+            You have {favs.length} saved propert{favs.length===1?"y":"ies"} and{" "}
+            {myLeads.length} active enquir{myLeads.length===1?"y":"ies"}.
+          </div>
+        </div>
+        <Btn style={{ background:"rgba(255,255,255,.15)", color:"#fff",
+          borderColor:"rgba(255,255,255,.35)" }}
+          onClick={() => setScreen("search")}>
+          🔍 Search Properties
+        </Btn>
+      </div>
+
+      {/* KPI row */}
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:12, marginBottom:20 }}>
+        <MetricCard label="Saved Properties" value={savedProps.length}
+          sub="Tap ❤️ to save more" icon="❤️" />
+        <MetricCard label="Enquiries Sent"   value={myLeads.length}
+          sub={`${myLeads.filter(l=>l.status==="NEW").length} awaiting response`} icon="📨" />
+        <MetricCard label="Visits Scheduled" value={myVisits.filter(v=>v.status==="CONFIRMED").length}
+          sub="Confirmed upcoming" icon="📅" />
+        <MetricCard label="Properties Viewed" value="24"
+          sub="This month" icon="👁" />
+      </div>
+
+      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16, marginBottom:16 }}>
+
+        {/* Recent enquiries */}
+        <Card>
+          <SectionHeader title="Recent Enquiries"
+            action={<Btn size="sm" onClick={() => setScreen("search")}>Browse more</Btn>} />
+          {myLeads.length === 0 ? (
+            <div style={{ textAlign:"center", padding:"24px 0", color:C.gray400 }}>
+              <div style={{ fontSize:32, marginBottom:8 }}>📭</div>
+              <div style={{ fontSize:13 }}>No enquiries yet.</div>
+              <Btn variant="primary" size="sm" style={{ marginTop:10 }}
+                onClick={() => setScreen("search")}>Find Properties</Btn>
+            </div>
+          ) : myLeads.map((l, i) => (
+            <div key={l.id} style={{ display:"flex", alignItems:"flex-start", gap:10,
+              padding:"10px 0", borderBottom: i < myLeads.length-1 ? `1px solid ${C.gray200}` : "none" }}>
+              <div style={{ width:38, height:38, borderRadius:8, background:C.blueLight,
+                display:"flex", alignItems:"center", justifyContent:"center", fontSize:18, flexShrink:0 }}>
+                🏠
+              </div>
+              <div style={{ flex:1, minWidth:0 }}>
+                <div style={{ fontWeight:500, fontSize:13, whiteSpace:"nowrap",
+                  overflow:"hidden", textOverflow:"ellipsis" }}>{l.property}</div>
+                <div style={{ fontSize:11, color:C.gray600, marginTop:2 }}>{l.date}</div>
+              </div>
+              <Badge color={statusColor(l.status)} small>{l.status.replace(/_/g," ")}</Badge>
+            </div>
+          ))}
+        </Card>
+
+        {/* Upcoming visits */}
+        <Card>
+          <SectionHeader title="Scheduled Visits"
+            action={<Btn size="sm" onClick={() => setScreen("search")}>Book a visit</Btn>} />
+          {myVisits.length === 0 ? (
+            <div style={{ textAlign:"center", padding:"24px 0", color:C.gray400 }}>
+              <div style={{ fontSize:32, marginBottom:8 }}>📅</div>
+              <div style={{ fontSize:13 }}>No visits scheduled yet.</div>
+            </div>
+          ) : myVisits.map((v, i) => (
+            <div key={v.id} style={{ display:"flex", alignItems:"center", gap:10,
+              padding:"10px 0", borderBottom: i < myVisits.length-1 ? `1px solid ${C.gray200}` : "none" }}>
+              <div style={{ width:38, height:38, borderRadius:8, background:C.greenLight,
+                display:"flex", alignItems:"center", justifyContent:"center", fontSize:20, flexShrink:0 }}>
+                📅
+              </div>
+              <div style={{ flex:1, minWidth:0 }}>
+                <div style={{ fontWeight:500, fontSize:13, whiteSpace:"nowrap",
+                  overflow:"hidden", textOverflow:"ellipsis" }}>{v.property}</div>
+                <div style={{ fontSize:11, color:C.gray600 }}>
+                  {v.date} · {v.slot}
+                </div>
+              </div>
+              <Badge color={statusColor(v.status)} small>{v.status}</Badge>
+            </div>
+          ))}
+        </Card>
+      </div>
+
+      {/* Saved properties strip */}
+      <Card style={{ marginBottom:16 }}>
+        <SectionHeader title={`Saved Properties (${savedProps.length})`}
+          action={<Btn size="sm" onClick={() => setScreen("favorites")}>View all</Btn>} />
+        {savedProps.length === 0 ? (
+          <div style={{ textAlign:"center", padding:"24px 0", color:C.gray400 }}>
+            <div style={{ fontSize:32, marginBottom:8 }}>❤️</div>
+            <div style={{ fontSize:13, marginBottom:10 }}>
+              Save properties by tapping the heart icon while browsing.
+            </div>
+            <Btn variant="primary" size="sm" onClick={() => setScreen("search")}>
+              Start Searching
+            </Btn>
+          </div>
+        ) : (
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:12 }}>
+            {savedProps.slice(0, 3).map(p => (
+              <PropertyCard key={p.id} prop={p} favs={favs}
+                onView={prop => { setDetailProp(prop); setScreen("detail"); }}
+                onFav={id => setFavs(f => f.filter(x => x !== id))} />
+            ))}
+          </div>
+        )}
+      </Card>
+
+      {/* Recommended for you */}
+      <Card>
+        <SectionHeader title="Recommended for You"
+          action={<Btn size="sm" onClick={() => setScreen("search")}>See all</Btn>} />
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:12 }}>
+          {recommended.map(p => (
+            <PropertyCard key={p.id} prop={p} favs={favs}
+              onView={prop => { setDetailProp(prop); setScreen("detail"); }}
+              onFav={id => setFavs(f => f.includes(id) ? f.filter(x=>x!==id) : [...f, id])} />
+          ))}
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+
+// ─── LOGIN / REGISTER SCREEN ───────────────────────────────────
+function AuthScreen({ onLogin, setScreen, returnTo }) {
+  const [tab, setTab] = useState("login");
+  const [loginPass,  setLoginPass]  = useState("password123");
+  const [showPass,   setShowPass]   = useState(false);
+
+  // Register state
+  const [regName,    setRegName]    = useState("");
+  const [regEmail,   setRegEmail]   = useState("");
+  const [regPhone,   setRegPhone]   = useState("");
+  const [regPass,    setRegPass]    = useState("");
+  const [regCompany, setRegCompany] = useState("");
+
+  const handleLogin = () => {
+    setError("");
+    if (!loginEmail || !loginPass) { setError("Please fill in all fields"); return; }
+    setLoading(true);
+    // In production: POST /api/v1/auth/login then call onLogin(user, role)
+    setTimeout(() => {
+      setLoading(false);
+      const role = loginEmail.includes("admin") ? "admin"
+                 : loginEmail.includes("agent") ? "agent"
+                 : "buyer";
+      const user = {
+        name:  role === "admin" ? "Admin User" : role === "agent" ? "Deepak Sharma" : "Amit Mehta",
+        email: loginEmail,
+        role,
+      };
+      onLogin(user, role);
+    }, 900);
+  };
+
+  const handleRegister = () => {
+    setError("");
+    if (!regName || !regEmail || !regPass) { setError("Name, email and password are required"); return; }
+    if (regRole === "agent" && !regCompany) { setError("Company name is required for agents"); return; }
+    if (regPass.length < 8) { setError("Password must be at least 8 characters"); return; }
+    setLoading(true);
+    setTimeout(() => {
+      setLoading(false);
+      const user = { name: regName, email: regEmail, role: regRole,
+                     company: regRole === "agent" ? regCompany : undefined };
+      onLogin(user, regRole);
+    }, 1100);
+  };
+
+  const TabBtn = ({ id, label }) => (
+    <button onClick={() => { setTab(id); setError(""); }}
+      style={{ flex:1, padding:"10px 0", border:"none", cursor:"pointer", fontFamily:"inherit",
+        fontWeight:600, fontSize:14, background:"transparent",
+        color: tab===id ? C.blue : C.gray600,
+        borderBottom: `2px solid ${tab===id ? C.blue : "transparent"}`,
+        transition:"all .15s" }}>
+      {label}
+    </button>
+  );
+
+  const QuickFill = ({ label, email, pass, role }) => (
+    <button onClick={() => { setLoginEmail(email); setLoginPass(pass); }}
+      style={{ padding:"4px 10px", borderRadius:6, border:`1px solid ${C.gray300}`, background:C.gray100,
+        cursor:"pointer", fontSize:11, fontFamily:"inherit", color:C.gray600 }}>
+      {label}
+    </button>
+  );
+
+  return (
+    <div style={{ minHeight:"100vh", background:`linear-gradient(135deg,${C.blue} 0%,${C.blueDark} 100%)`,
+      display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}>
+      <div style={{ width:"100%", maxWidth:440 }}>
+
+        {/* Logo */}
+        <div style={{ textAlign:"center", marginBottom:28 }}>
+          <div style={{ fontSize:28, fontWeight:800, color:"#fff", marginBottom:4 }}>
+            <span style={{opacity:.75}}>Prop</span>Vault
+          </div>
+          <div style={{ color:"rgba(255,255,255,.7)", fontSize:13 }}>
+            India&apos;s multi-vendor real estate marketplace
+          </div>
+        </div>
+
+        {/* Card */}
+        <div style={{ background:"#fff", borderRadius:16, overflow:"hidden",
+          boxShadow:"0 20px 60px rgba(0,0,0,.25)" }}>
+
+          {/* Tabs */}
+          <div style={{ display:"flex", borderBottom:`1px solid ${C.gray200}` }}>
+            <TabBtn id="login"    label="Sign In" />
+            <TabBtn id="register" label="Create Account" />
+          </div>
+
+          <div style={{ padding:28 }}>
+            {error && (
+              <div style={{ background:C.redLight, color:C.red, borderRadius:8, padding:"10px 14px",
+                fontSize:13, marginBottom:16 }}>⚠️ {error}</div>
+            )}
+
+            {tab === "login" ? (
+              <>
+                <Input label="Email address" type="email" placeholder="you@email.com"
+                  value={loginEmail} onChange={e=>setLoginEmail(e.target.value)} required />
+                <div style={{ position:"relative" }}>
+                  <Input label="Password" type={showPass?"text":"password"} placeholder="Your password"
+                    value={loginPass} onChange={e=>setLoginPass(e.target.value)} required />
+                  <button onClick={()=>setShowPass(v=>!v)}
+                    style={{ position:"absolute", right:10, top:30, background:"none", border:"none",
+                      cursor:"pointer", fontSize:16, color:C.gray400 }}>
+                    {showPass ? "🙈" : "👁"}
+                  </button>
+                </div>
+                <div style={{ display:"flex", justifyContent:"flex-end", marginTop:-8, marginBottom:16 }}>
+                  <button onClick={()=>setScreen("forgot-password")}
+                    style={{ background:"none", border:"none", cursor:"pointer", color:C.blue,
+                      fontSize:12, fontFamily:"inherit" }}>
+                    Forgot password?
+                  </button>
+                </div>
+                <Btn variant="primary" fullWidth onClick={handleLogin} disabled={loading}>
+                  {loading ? "Signing in…" : "Sign In →"}
+                </Btn>
+
+                {/* Quick demo logins */}
+                <div style={{ marginTop:20, paddingTop:16, borderTop:`1px solid ${C.gray200}` }}>
+                  <div style={{ fontSize:11, color:C.gray400, marginBottom:8, textAlign:"center" }}>
+                    Demo quick-fill:
+                  </div>
+                  <div style={{ display:"flex", gap:6, justifyContent:"center", flexWrap:"wrap" }}>
+                    <QuickFill label="🏠 Buyer"  email="buyer@propvault.in"  pass="password123"/>
+                    <QuickFill label="🏢 Agent"  email="agent@propvault.in"  pass="password123"/>
+                    <QuickFill label="⚙️ Admin"  email="admin@propvault.in"  pass="password123"/>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <>
+                {/* Role selector */}
+                <div style={{ marginBottom:16 }}>
+                  <div style={{ fontSize:12, fontWeight:500, color:C.gray600, marginBottom:8 }}>
+                    I am a:
+                  </div>
+                  <div style={{ display:"flex", gap:8 }}>
+                    {[["buyer","🏠 Property Buyer"],["agent","🏢 Real Estate Agent"]].map(([r,label])=>(
+                      <button key={r} onClick={()=>setRegRole(r)}
+                        style={{ flex:1, padding:"10px 0", border:`2px solid ${regRole===r?C.blue:C.gray300}`,
+                          borderRadius:10, background:regRole===r?C.blueLight:"transparent",
+                          color:regRole===r?C.blue:C.gray600, cursor:"pointer",
+                          fontFamily:"inherit", fontWeight:600, fontSize:13, transition:"all .15s" }}>
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <Input label="Full name" placeholder="Deepak Sharma" required
+                  value={regName} onChange={e=>setRegName(e.target.value)} />
+                <Input label="Email" type="email" placeholder="deepak@company.in" required
+                  value={regEmail} onChange={e=>setRegEmail(e.target.value)} />
+                <Input label="Mobile number" type="tel" placeholder="9876543210" required
+                  value={regPhone} onChange={e=>setRegPhone(e.target.value)} />
+                {regRole === "agent" && (
+                  <Input label="Company / Agency name" placeholder="Sharma Homes Pvt Ltd" required
+                    value={regCompany} onChange={e=>setRegCompany(e.target.value)} />
+                )}
+                <Input label="Password" type="password" placeholder="Min 8 characters" required
+                  value={regPass} onChange={e=>setRegPass(e.target.value)} />
+                <Btn variant="primary" fullWidth onClick={handleRegister} disabled={loading}>
+                  {loading ? "Creating account…" : "Create Account →"}
+                </Btn>
+                <div style={{ fontSize:11, color:C.gray400, textAlign:"center", marginTop:12 }}>
+                  By registering you agree to our Terms of Service and Privacy Policy.
+                  {regRole === "agent" && <> A 14-day free trial starts immediately.</>}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── AGENT: Profile Edit Screen ────────────────────────────────
+function AgentProfileEditScreen({ setScreen }) {
+  const [saved, setSaved] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [form, setForm] = useState({
+    companyName:     "Sharma Homes",
+    ownerName:       "Deepak Sharma",
+    tagline:         "Delhi's most trusted residential specialists",
+    description:     "Over 12 years of experience helping families find their dream homes across Delhi NCR. Specialising in South Delhi, Dwarka, and Vasant Kunj.",
+    phone:           "9876543210",
+    email:           "deepak@sharmahomes.in",
+    website:         "https://sharmahomes.in",
+    city:            "Delhi",
+    state:           "Delhi",
+    licenseNo:       "DL-2024-0192",
+    reraNo:          "RERA/DL/0192/2024",
+    yearsExperience: "12",
+    specializations: "Residential,Commercial",
+    languages:       "Hindi,English",
+    facebook:        "",
+    linkedin:        "https://linkedin.com/in/deepaksharma",
+    instagram:       "",
+  });
+
+  const set = (k) => (e) => setForm(f => ({ ...f, [k]: e.target.value }));
+
+  const handleSave = () => {
+    setLoading(true);
+    // In production: PUT /api/v1/agents/me
+    setTimeout(() => { setLoading(false); setSaved(true); setTimeout(()=>setSaved(false), 3000); }, 900);
+  };
+
+  const Section = ({ title, children }) => (
+    <Card style={{ marginBottom:16 }}>
+      <h3 style={{ fontSize:14, fontWeight:600, color:C.gray800, margin:"0 0 16px",
+        paddingBottom:10, borderBottom:`1px solid ${C.gray200}` }}>{title}</h3>
+      {children}
+    </Card>
+  );
+
+  return (
+    <div style={{ padding:24, maxWidth:760, margin:"0 auto" }}>
+      <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:20 }}>
+        <button onClick={()=>setScreen("agent-profile")}
+          style={{ background:"none", border:"none", cursor:"pointer", color:C.blue, fontSize:13, fontFamily:"inherit" }}>
+          ← My Profile
+        </button>
+        <h2 style={{ fontSize:18, fontWeight:600, margin:0 }}>Edit Profile</h2>
+        {saved && <span style={{ color:C.green, fontSize:13, fontWeight:500 }}>✓ Profile saved!</span>}
+        <Btn variant="primary" style={{ marginLeft:"auto" }} onClick={handleSave} disabled={loading}>
+          {loading ? "Saving…" : "Save Changes"}
+        </Btn>
+      </div>
+
+      {/* Logo upload */}
+      <Card style={{ marginBottom:16 }}>
+        <div style={{ display:"flex", alignItems:"center", gap:16 }}>
+          <div style={{ width:72, height:72, borderRadius:12, background:C.blueLight,
+            display:"flex", alignItems:"center", justifyContent:"center",
+            fontSize:28, fontWeight:700, color:C.blue }}>S</div>
+          <div>
+            <div style={{ fontWeight:600, marginBottom:4 }}>Company Logo</div>
+            <div style={{ fontSize:12, color:C.gray600, marginBottom:10 }}>
+              PNG or JPG, min 200×200px, max 2 MB
+            </div>
+            <Btn size="sm" icon="📷">Upload Logo</Btn>
+          </div>
+        </div>
+      </Card>
+
+      <Section title="Company Information">
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
+          <div style={{ gridColumn:"1/-1" }}>
+            <Input label="Company / Agency name" value={form.companyName} onChange={set("companyName")} required />
+          </div>
+          <Input label="Your name (owner)" value={form.ownerName} onChange={set("ownerName")} required />
+          <Input label="Years of experience" type="number" value={form.yearsExperience} onChange={set("yearsExperience")} />
+          <div style={{ gridColumn:"1/-1" }}>
+            <Input label="Tagline" placeholder="One-line description of your agency" value={form.tagline} onChange={set("tagline")} />
+          </div>
+          <div style={{ gridColumn:"1/-1" }}>
+            <Input label="About / Description" rows={4} value={form.description} onChange={set("description")}
+              placeholder="Describe your agency, specialisations, service areas…" />
+          </div>
+        </div>
+      </Section>
+
+      <Section title="Contact Details">
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
+          <Input label="Mobile number" type="tel" value={form.phone} onChange={set("phone")} required />
+          <Input label="Business email" type="email" value={form.email} onChange={set("email")} required />
+          <div style={{ gridColumn:"1/-1" }}>
+            <Input label="Website" type="url" placeholder="https://yourcompany.in" value={form.website} onChange={set("website")} />
+          </div>
+          <Input label="City" value={form.city} onChange={set("city")} required />
+          <Input label="State" options={["Delhi","Maharashtra","Karnataka","Uttar Pradesh","Tamil Nadu","Gujarat","Rajasthan","West Bengal"]}
+            value={form.state} onChange={set("state")} />
+        </div>
+      </Section>
+
+      <Section title="Credentials & Compliance">
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
+          <Input label="License number" placeholder="DL-2024-0192" value={form.licenseNo} onChange={set("licenseNo")} />
+          <Input label="RERA registration number" placeholder="RERA/DL/0192/2024" value={form.reraNo} onChange={set("reraNo")} />
+        </div>
+        <div style={{ marginTop:8, padding:"10px 14px", background:C.blueLight, borderRadius:8, fontSize:12, color:C.blueText }}>
+          ℹ️ RERA registration significantly increases buyer trust. <a href="#" style={{color:C.blue}}>Learn how to register →</a>
+        </div>
+      </Section>
+
+      <Section title="Expertise">
+        <div style={{ marginBottom:14 }}>
+          <div style={{ fontSize:12, fontWeight:500, color:C.gray600, marginBottom:8 }}>Specialisations</div>
+          <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
+            {["Residential","Commercial","Luxury","Plots","Co-working","Industrial","Rental","NRI Properties"].map(s => {
+              const active = form.specializations.includes(s);
+              return (
+                <button key={s} onClick={() => {
+                    const arr = form.specializations.split(",").filter(Boolean);
+                    const next = active ? arr.filter(x=>x!==s) : [...arr,s];
+                    setForm(f=>({...f, specializations:next.join(",")}));
+                  }}
+                  style={{ padding:"5px 12px", borderRadius:20,
+                    border:`1px solid ${active?C.blue:C.gray300}`,
+                    background:active?C.blueLight:"transparent",
+                    color:active?C.blue:C.gray600,
+                    fontSize:12, cursor:"pointer", fontFamily:"inherit" }}>
+                  {active?"✓ ":""}{s}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+        <div>
+          <div style={{ fontSize:12, fontWeight:500, color:C.gray600, marginBottom:8 }}>Languages spoken</div>
+          <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
+            {["Hindi","English","Marathi","Tamil","Telugu","Kannada","Gujarati","Punjabi","Bengali"].map(l => {
+              const active = form.languages.includes(l);
+              return (
+                <button key={l} onClick={() => {
+                    const arr = form.languages.split(",").filter(Boolean);
+                    const next = active ? arr.filter(x=>x!==l) : [...arr,l];
+                    setForm(f=>({...f, languages:next.join(",")}));
+                  }}
+                  style={{ padding:"5px 12px", borderRadius:20,
+                    border:`1px solid ${active?C.blue:C.gray300}`,
+                    background:active?C.blueLight:"transparent",
+                    color:active?C.blue:C.gray600,
+                    fontSize:12, cursor:"pointer", fontFamily:"inherit" }}>
+                  {l}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </Section>
+
+      <Section title="Social Media">
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
+          <Input label="LinkedIn" type="url" placeholder="https://linkedin.com/in/…" value={form.linkedin} onChange={set("linkedin")} />
+          <Input label="Facebook" type="url" placeholder="https://facebook.com/…"  value={form.facebook} onChange={set("facebook")} />
+          <Input label="Instagram" type="url" placeholder="https://instagram.com/…" value={form.instagram} onChange={set("instagram")} />
+        </div>
+      </Section>
+
+      <div style={{ display:"flex", justifyContent:"flex-end", gap:8, marginTop:4 }}>
+        <Btn onClick={()=>setScreen("agent-profile")}>Cancel</Btn>
+        <Btn variant="primary" onClick={handleSave} disabled={loading}>
+          {loading ? "Saving…" : "Save All Changes"}
+        </Btn>
+      </div>
+    </div>
+  );
+}
+
+// ─── AGENT: My Profile (public-facing preview + edit link) ────
+function AgentMyProfileScreen({ setScreen }) {
+  return (
+    <div style={{ padding:24, maxWidth:900, margin:"0 auto" }}>
+      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:20 }}>
+        <h2 style={{ fontSize:18, fontWeight:600, margin:0 }}>My Agent Profile</h2>
+        <Btn variant="primary" icon="✏️" onClick={()=>setScreen("agent-profile-edit")}>Edit Profile</Btn>
+      </div>
+      <AgentPublicProfile agent={AGENTS[0]} setScreen={setScreen} setDetailProp={()=>{}} />
+    </div>
+  );
+}
+
+// ─── ADMIN: Revenue Analytics Screen ─────────────────────────
+const MONTHLY_REVENUE = [
+  {month:"Nov",basic:7992,pro:29990,premium:23996},
+  {month:"Dec",basic:8991,pro:35988,premium:29995},
+  {month:"Jan",basic:10989,pro:38987,premium:35994},
+  {month:"Feb",basic:11988,pro:47984,premium:41993},
+  {month:"Mar",basic:12987,pro:56981,premium:47992},
+  {month:"Apr",basic:17982,pro:62979,premium:47992},
+];
+
+// ─── ADMIN: User Management (Buyers + Agents unified) ──────────
+const MOCK_BUYERS = [
+  { id:"b1", name:"Amit Mehta",   email:"amit@gmail.com",   phone:"+91 98765 00001", joined:"Feb 2024", savedCount:4,  leadsSubmitted:6, status:"Active" },
+  { id:"b2", name:"Priya Shah",   email:"priya@gmail.com",  phone:"+91 98765 00002", joined:"Jan 2024", savedCount:11, leadsSubmitted:3, status:"Active" },
+  { id:"b3", name:"Rohan Verma",  email:"rohan@gmail.com",  phone:"+91 98765 00003", joined:"Mar 2024", savedCount:2,  leadsSubmitted:1, status:"Active" },
+  { id:"b4", name:"Sneha Iyer",   email:"sneha@gmail.com",  phone:"+91 98765 00004", joined:"Dec 2023", savedCount:7,  leadsSubmitted:9, status:"Suspended" },
+  { id:"b5", name:"Karan Mehra",  email:"karan@gmail.com",  phone:"+91 98765 00005", joined:"Apr 2024", savedCount:0,  leadsSubmitted:0, status:"Active" },
+];
+
+function AdminUsers({ setScreen, setSelectedAgent }) {
+  const [tab, setTab]           = useState("agents");   // "agents" | "buyers"
+  const [buyers, setBuyers]     = useState(MOCK_BUYERS.map(b=>({...b})));
+  const [agents, setAgents]     = useState(AGENTS.map(a=>({...a})));
+  const [search, setSearch]     = useState("");
+  const [selected, setSelected] = useState(null);
+  const [toast, setToast]       = useState(null);
+
+  const showToast = (msg, type="success") => { setToast({msg,type}); setTimeout(()=>setToast(null),3000); };
+
+  const toggleBuyerStatus = (id) => {
+    setBuyers(prev => prev.map(b => b.id===id
+      ? {...b, status: b.status==="Active" ? "Suspended" : "Active"}
+      : b));
+    showToast("Buyer status updated");
+  };
+
+  const filteredAgents = agents.filter(a =>
+    !search || a.company.toLowerCase().includes(search.toLowerCase()) || a.name.toLowerCase().includes(search.toLowerCase()));
+  const filteredBuyers = buyers.filter(b =>
+    !search || b.name.toLowerCase().includes(search.toLowerCase()) || b.email.toLowerCase().includes(search.toLowerCase()));
+
+  return (
+    <div style={{ padding:24, position:"relative" }}>
+      {toast && (
+        <div style={{ position:"fixed", top:68, right:24, zIndex:300,
+          background: toast.type==="warn" ? C.amberLight : C.greenLight,
+          color: toast.type==="warn" ? C.amber : C.green,
+          border:`1px solid ${toast.type==="warn" ? C.amber : C.green}`,
+          borderRadius:10, padding:"12px 20px", fontSize:13, fontWeight:500,
+          boxShadow:"0 4px 20px rgba(0,0,0,.12)" }}>
+          {toast.msg}
+        </div>
+      )}
+
+      <SectionHeader
+        title="User Management"
+        action={<Btn size="sm">⬇ Export All Users</Btn>}
+      />
+
+      {/* Summary cards */}
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:12, marginBottom:20 }}>
+        <MetricCard label="Total Agents"    value={agents.length}                                  sub={`${agents.filter(a=>a.status==="Active").length} active`} icon="🏢" />
+        <MetricCard label="Total Buyers"    value={buyers.length}                                  sub={`${buyers.filter(b=>b.status==="Active").length} active`} icon="🏠" />
+        <MetricCard label="Suspended Users" value={agents.filter(a=>a.status==="Suspended").length + buyers.filter(b=>b.status==="Suspended").length} sub="Across both roles" icon="🚫" />
+        <MetricCard label="New This Month"  value="9"                                               sub="3 agents · 6 buyers" icon="✨" />
+      </div>
+
+      {/* Tabs */}
+      <div style={{ display:"flex", gap:6, marginBottom:16, alignItems:"center" }}>
+        {[["agents","🏢 Agents"],["buyers","🏠 Buyers"]].map(([id,label]) => (
+          <button key={id} onClick={() => { setTab(id); setSelected(null); }}
+            style={{ padding:"7px 16px", borderRadius:20, fontSize:13, cursor:"pointer", fontFamily:"inherit",
+              fontWeight: tab===id ? 600 : 400,
+              border:`1px solid ${tab===id ? C.blue : C.gray300}`,
+              background: tab===id ? C.blue : "transparent",
+              color: tab===id ? "#fff" : C.gray600 }}>
+            {label}
+          </button>
+        ))}
+        <input value={search} onChange={e=>setSearch(e.target.value)}
+          placeholder={`Search ${tab}…`}
+          style={{ marginLeft:"auto", padding:"7px 12px", border:`1px solid ${C.gray300}`,
+            borderRadius:8, fontSize:13, fontFamily:"inherit", outline:"none", minWidth:220 }}/>
+      </div>
+
+      <div style={{ display:"grid", gridTemplateColumns: selected ? "1fr 340px" : "1fr", gap:16 }}>
+        <Card padding="0">
+          {tab === "agents" ? (
+            <Table
+              cols={["Agent / Company","City","Plan","Status","Joined","Actions"]}
+              rows={filteredAgents.map(a => [
+                <div style={{ cursor:"pointer" }} onClick={() => setSelected({...a, _type:"agent"})}>
+                  <div style={{ fontWeight:500, fontSize:13, color:selected?.id===a.id?C.blue:C.gray800 }}>{a.company}</div>
+                  <div style={{ fontSize:11, color:C.gray600 }}>{a.name}</div>
+                </div>,
+                a.city,
+                <Badge color={a.plan==="Premium"?"blue":a.plan==="Pro"?"purple":"gray"} small>{a.plan}</Badge>,
+                <Badge color={a.status==="Active"?"green":a.status==="Pending"?"amber":"red"} small>{a.status}</Badge>,
+                <span style={{ fontSize:12, color:C.gray600 }}>{a.joined}</span>,
+                <Btn size="sm" onClick={() => { setSelectedAgent && setSelectedAgent(a); setScreen("agent-profile"); }}>
+                  View Profile
+                </Btn>,
+              ])}
+            />
+          ) : (
+            <Table
+              cols={["Buyer","Contact","Saved","Leads","Status","Actions"]}
+              rows={filteredBuyers.map(b => [
+                <div style={{ cursor:"pointer" }} onClick={() => setSelected({...b, _type:"buyer"})}>
+                  <div style={{ fontWeight:500, fontSize:13, color:selected?.id===b.id?C.blue:C.gray800 }}>{b.name}</div>
+                  <div style={{ fontSize:11, color:C.gray600 }}>Joined {b.joined}</div>
+                </div>,
+                <div>
+                  <div style={{ fontSize:12 }}>{b.email}</div>
+                  <div style={{ fontSize:11, color:C.gray400 }}>{b.phone}</div>
+                </div>,
+                <span>❤️ {b.savedCount}</span>,
+                <span>📨 {b.leadsSubmitted}</span>,
+                <Badge color={b.status==="Active"?"green":"red"} small>{b.status}</Badge>,
+                <Btn size="sm" style={{ color: b.status==="Active"?C.red:C.green, borderColor: b.status==="Active"?C.red:C.green }}
+                  onClick={() => toggleBuyerStatus(b.id)}>
+                  {b.status==="Active" ? "Suspend" : "Reactivate"}
+                </Btn>,
+              ])}
+            />
+          )}
+        </Card>
+
+        {/* Detail panel */}
+        {selected && (
+          <Card style={{ alignSelf:"start" }}>
+            <div style={{ display:"flex", justifyContent:"space-between", marginBottom:14 }}>
+              <h3 style={{ fontSize:15, fontWeight:700, margin:0 }}>
+                {selected._type === "agent" ? selected.company : selected.name}
+              </h3>
+              <button onClick={() => setSelected(null)}
+                style={{ background:"none", border:"none", fontSize:18, cursor:"pointer", color:C.gray400 }}>✕</button>
+            </div>
+
+            <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:14 }}>
+              <div style={{ width:44, height:44, borderRadius:"50%", background:C.blueLight,
+                display:"flex", alignItems:"center", justifyContent:"center", fontWeight:700, color:C.blue, fontSize:18 }}>
+                {(selected._type === "agent" ? selected.company : selected.name)[0]}
+              </div>
+              <div>
+                <div style={{ fontWeight:600 }}>{selected._type === "agent" ? selected.name : selected.email}</div>
+                <Badge color={selected.status==="Active"?"green":selected.status==="Pending"?"amber":"red"}>{selected.status}</Badge>
+              </div>
+            </div>
+
+            {selected._type === "agent" ? (
+              <>
+                {[["📍 City",selected.city],["📋 License",selected.license],["💳 Plan",selected.plan],
+                  ["🏠 Listings",`${selected.active} active / ${selected.listings} total`],["📅 Joined",selected.joined]]
+                  .map(([l,v]) => (
+                    <div key={l} style={{ display:"flex", justifyContent:"space-between",
+                      padding:"7px 0", borderBottom:`1px solid ${C.gray200}`, fontSize:13 }}>
+                      <span style={{ color:C.gray600 }}>{l}</span><span style={{ fontWeight:500 }}>{v}</span>
+                    </div>
+                  ))}
+                <Btn fullWidth style={{ marginTop:14 }}
+                  onClick={() => { setSelectedAgent && setSelectedAgent(selected); setScreen("agent-profile"); }}>
+                  View Public Profile →
+                </Btn>
+              </>
+            ) : (
+              <>
+                {[["✉️ Email",selected.email],["📞 Phone",selected.phone],["📅 Joined",selected.joined],
+                  ["❤️ Saved Properties",selected.savedCount],["📨 Leads Submitted",selected.leadsSubmitted]]
+                  .map(([l,v]) => (
+                    <div key={l} style={{ display:"flex", justifyContent:"space-between",
+                      padding:"7px 0", borderBottom:`1px solid ${C.gray200}`, fontSize:13 }}>
+                      <span style={{ color:C.gray600 }}>{l}</span><span style={{ fontWeight:500 }}>{v}</span>
+                    </div>
+                  ))}
+                <Btn fullWidth style={{ marginTop:14, color: selected.status==="Active"?C.red:C.green, borderColor: selected.status==="Active"?C.red:C.green }}
+                  onClick={() => toggleBuyerStatus(selected.id)}>
+                  {selected.status==="Active" ? "Suspend Account" : "Reactivate Account"}
+                </Btn>
+              </>
+            )}
+          </Card>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── ADMIN: Platform Settings ──────────────────────────────────
+function AdminSettings({ setScreen }) {
+  const [plans, setPlans]   = useState(PLANS.map(p => ({...p, features:[...p.features]})));
+  const [gstPercent, setGst]= useState(18);
+  const [trialDays, setTrialDays] = useState(14);
+  const [editingPlan, setEditingPlan] = useState(null);
+  const [toast, setToast]   = useState(null);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+
+  const showToast = (msg) => { setToast(msg); setTimeout(()=>setToast(null), 2500); };
+
+  const startEdit = (plan) => setEditingPlan({ ...plan, features:[...plan.features] });
+
+  const saveEdit = () => {
+    setPlans(prev => prev.map(p => p.id === editingPlan.id ? editingPlan : p));
+    setEditingPlan(null);
+    showToast(`${editingPlan.name} plan updated successfully`);
+  };
+
+  const updateField = (field, value) => setEditingPlan(p => ({ ...p, [field]: value }));
+
+  const updateFeature = (idx, value) => {
+    setEditingPlan(p => {
+      const features = [...p.features];
+      features[idx] = value;
+      return { ...p, features };
+    });
+  };
+
+  const addFeature = () => setEditingPlan(p => ({ ...p, features:[...p.features, "New feature"] }));
+  const removeFeature = (idx) => setEditingPlan(p => ({ ...p, features: p.features.filter((_,i)=>i!==idx) }));
+
+  const handleSaveGlobal = () => showToast("Platform settings saved");
+
+  const handleResetDefaults = () => {
+    setPlans(PLANS.map(p => ({...p, features:[...p.features]})));
+    setGst(18);
+    setTrialDays(14);
+    setShowResetConfirm(false);
+    showToast("Settings reset to defaults");
+  };
+
+  return (
+    <div style={{ padding:24, position:"relative", maxWidth:1000 }}>
+      {toast && (
+        <div style={{ position:"fixed", top:68, right:24, zIndex:300,
+          background:C.greenLight, color:C.green, border:`1px solid ${C.green}`,
+          borderRadius:10, padding:"12px 20px", fontSize:13, fontWeight:500,
+          boxShadow:"0 4px 20px rgba(0,0,0,.12)" }}>
+          ✓ {toast}
+        </div>
+      )}
+
+      {/* Reset confirmation */}
+      {showResetConfirm && (
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.5)",
+          display:"flex", alignItems:"center", justifyContent:"center", zIndex:200 }}>
+          <div style={{ background:C.white, borderRadius:14, padding:28, width:400, maxWidth:"90vw" }}>
+            <h3 style={{ margin:"0 0 8px", fontSize:16, fontWeight:700 }}>Reset all settings?</h3>
+            <p style={{ fontSize:13, color:C.gray600, marginBottom:18 }}>
+              This will restore default plan pricing, limits, GST rate, and trial duration.
+              Existing agent subscriptions are not affected.
+            </p>
+            <div style={{ display:"flex", gap:8, justifyContent:"flex-end" }}>
+              <Btn onClick={() => setShowResetConfirm(false)}>Cancel</Btn>
+              <Btn variant="danger" onClick={handleResetDefaults}>Reset to Defaults</Btn>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Plan edit modal */}
+      {editingPlan && (
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.5)",
+          display:"flex", alignItems:"center", justifyContent:"center", zIndex:200, padding:20 }}>
+          <div style={{ background:C.white, borderRadius:14, padding:28, width:480, maxWidth:"100%", maxHeight:"85vh", overflowY:"auto" }}>
+            <h3 style={{ margin:"0 0 16px", fontSize:16, fontWeight:700 }}>Edit {editingPlan.name} Plan</h3>
+
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
+              <Input label="Monthly price (₹)" type="number" value={editingPlan.price}
+                onChange={e => updateField("price", Number(e.target.value))} />
+              <Input label="Yearly price (₹)" type="number" value={editingPlan.yearly}
+                onChange={e => updateField("yearly", Number(e.target.value))} />
+              <Input label="Max listings (-1 = unlimited)" type="number" value={editingPlan.maxListings}
+                onChange={e => updateField("maxListings", Number(e.target.value))} />
+              <Input label="Featured slots (-1 = unlimited)" type="number" value={editingPlan.featured}
+                onChange={e => updateField("featured", Number(e.target.value))} />
+            </div>
+
+            <div style={{ marginTop:6, marginBottom:10 }}>
+              <label style={{ display:"flex", alignItems:"center", gap:8, fontSize:13, cursor:"pointer" }}>
+                <input type="checkbox" checked={editingPlan.highlight}
+                  onChange={e => updateField("highlight", e.target.checked)} />
+                Mark as "Most Popular" badge
+              </label>
+            </div>
+
+            <div style={{ fontSize:12, fontWeight:500, color:C.gray600, margin:"14px 0 8px" }}>Features</div>
+            {editingPlan.features.map((f, i) => (
+              <div key={i} style={{ display:"flex", gap:6, marginBottom:6 }}>
+                <input value={f} onChange={e => updateFeature(i, e.target.value)}
+                  style={{ flex:1, padding:"7px 10px", border:`1px solid ${C.gray300}`, borderRadius:8,
+                    fontSize:12, fontFamily:"inherit", outline:"none" }} />
+                <button onClick={() => removeFeature(i)}
+                  style={{ background:"none", border:"none", cursor:"pointer", color:C.red, fontSize:14, padding:"0 6px" }}>✕</button>
+              </div>
+            ))}
+            <Btn size="sm" onClick={addFeature}>+ Add Feature</Btn>
+
+            <div style={{ display:"flex", gap:8, justifyContent:"flex-end", marginTop:20 }}>
+              <Btn onClick={() => setEditingPlan(null)}>Cancel</Btn>
+              <Btn variant="primary" onClick={saveEdit}>Save Plan</Btn>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <SectionHeader title="Platform Settings" />
+
+      {/* Subscription plans editor */}
+      <Card style={{ marginBottom:20 }}>
+        <h3 style={{ fontSize:14, fontWeight:600, margin:"0 0 4px" }}>Subscription Plans</h3>
+        <p style={{ fontSize:12, color:C.gray600, margin:"0 0 16px" }}>
+          Changes apply to new subscriptions and renewals. Existing agents keep their current billing cycle.
+        </p>
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:14 }}>
+          {plans.map(p => (
+            <div key={p.id} style={{ border:`1px solid ${p.highlight ? C.blue : C.gray300}`,
+              borderRadius:10, padding:16, position:"relative" }}>
+              {p.highlight && <Badge color="blue" small style={{ position:"absolute", top:-8, right:12 }}>Popular</Badge>}
+              <div style={{ fontWeight:700, fontSize:14, marginBottom:4 }}>{p.name}</div>
+              <div style={{ fontSize:20, fontWeight:700, color:C.blue }}>₹{p.price.toLocaleString()}<span style={{fontSize:11,color:C.gray400,fontWeight:400}}>/mo</span></div>
+              <div style={{ fontSize:11, color:C.gray600, marginTop:4 }}>
+                {p.maxListings === -1 ? "Unlimited" : p.maxListings} listings · {p.featured === -1 ? "Unlimited" : p.featured} featured
+              </div>
+              <div style={{ fontSize:11, color:C.gray400, marginTop:2 }}>{p.features.length} features</div>
+              <Btn size="sm" fullWidth style={{ marginTop:12 }} onClick={() => startEdit(p)}>✏️ Edit Plan</Btn>
+            </div>
+          ))}
+        </div>
+      </Card>
+
+      {/* Global settings */}
+      <Card style={{ marginBottom:20 }}>
+        <h3 style={{ fontSize:14, fontWeight:600, margin:"0 0 16px" }}>Billing & Trial Settings</h3>
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16 }}>
+          <Input label="GST percentage (%)" type="number" value={gstPercent}
+            onChange={e => setGst(Number(e.target.value))} />
+          <Input label="Free trial duration (days)" type="number" value={trialDays}
+            onChange={e => setTrialDays(Number(e.target.value))} />
+        </div>
+        <div style={{ background:C.blueLight, borderRadius:8, padding:"10px 14px", fontSize:12, color:C.blueText, marginTop:4 }}>
+          ℹ️ Example: Pro plan (₹2,999/mo) → GST ₹{Math.round(2999*gstPercent/100)} → Total ₹{2999+Math.round(2999*gstPercent/100)}/mo
+        </div>
+        <Btn variant="primary" style={{ marginTop:16 }} onClick={handleSaveGlobal}>Save Settings</Btn>
+      </Card>
+
+      {/* Danger zone */}
+      <Card style={{ borderColor:C.red }}>
+        <h3 style={{ fontSize:14, fontWeight:600, margin:"0 0 6px", color:C.red }}>Danger Zone</h3>
+        <p style={{ fontSize:12, color:C.gray600, margin:"0 0 14px" }}>
+          Reset all platform settings to their original default values. This cannot be undone.
+        </p>
+        <Btn style={{ color:C.red, borderColor:C.red }} onClick={() => setShowResetConfirm(true)}>
+          Reset to Defaults
+        </Btn>
+      </Card>
+    </div>
+  );
+}
+
+
+// ─── ADMIN: Revenue Analytics ──────────────────────────────────
+function AdminRevenueScreen({ setScreen }) {
+  const [period, setPeriod] = useState("6m");
+
+  const totalMRR = 17982 + 62979 + 47992;
+  const totalGST = Math.round(totalMRR * 0.18);
+  const netRevenue = totalMRR + totalGST;
+
+  const planData = [
+    { name:"Basic",   agents:18, mrr:17982,  color:C.gray400,  pct:14 },
+    { name:"Pro",     agents:21, mrr:62979,  color:C.blue,     pct:48 },
+    { name:"Premium", agents:8,  mrr:47992,  color:C.blueDark, pct:38 },
+  ];
+
+  return (
+    <div style={{ padding:24 }}>
+      <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:20 }}>
+        <button onClick={()=>setScreen("admin-dash")} style={{background:"none",border:"none",cursor:"pointer",color:C.blue,fontSize:13,fontFamily:"inherit"}}>← Dashboard</button>
+        <h2 style={{ fontSize:18, fontWeight:600, margin:0 }}>Revenue Analytics</h2>
+        <div style={{ marginLeft:"auto", display:"flex", gap:6 }}>
+          {["3m","6m","12m"].map(p=>(
+            <button key={p} onClick={()=>setPeriod(p)}
+              style={{ padding:"4px 12px", borderRadius:20, border:`1px solid ${period===p?C.blue:C.gray300}`,
+                background:period===p?C.blue:"transparent", color:period===p?"#fff":C.gray600,
+                fontSize:12, cursor:"pointer", fontFamily:"inherit" }}>
+              {p}
+            </button>
+          ))}
+        </div>
+        <Btn size="sm" icon="⬇">Export CSV</Btn>
+      </div>
+
+      {/* KPI Hero */}
+      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr 1fr", gap:12, marginBottom:20 }}>
+        <StatTile label="Monthly Recurring Revenue" value={`₹${(totalMRR/1000).toFixed(0)}K`} change={12}
+          data={MONTHLY_REVENUE.map(m=>m.basic+m.pro+m.premium)} color={C.blue} icon="💰"/>
+        <StatTile label="GST Collected (18%)" value={`₹${(totalGST/1000).toFixed(1)}K`} change={12}
+          data={MONTHLY_REVENUE.map(m=>Math.round((m.basic+m.pro+m.premium)*0.18))} color={C.green} icon="🧾"/>
+        <StatTile label="Total Invoiced" value={`₹${(netRevenue/1000).toFixed(0)}K`} change={12}
+          data={MONTHLY_REVENUE.map(m=>Math.round((m.basic+m.pro+m.premium)*1.18))} color={C.amber} icon="📄"/>
+        <StatTile label="Active Subscriptions" value="47" change={8}
+          data={[30,32,35,38,41,44,47]} color="#534AB7" icon="🔄"/>
+      </div>
+
+      <div style={{ display:"grid", gridTemplateColumns:"2fr 1fr", gap:16, marginBottom:20 }}>
+        {/* Monthly Revenue Chart */}
+        <Card>
+          <SectionHeader title="Revenue Trend (6 months)"
+            action={<div style={{fontSize:11,color:C.gray400}}>Stacked by plan</div>} />
+          <div style={{ marginBottom:12 }}>
+            <BarChart
+              data={MONTHLY_REVENUE.map(m=>m.basic+m.pro+m.premium)}
+              labels={MONTHLY_REVENUE.map(m=>m.month)}
+              color={C.blue} height={140} />
+          </div>
+          {/* Legend */}
+          <div style={{ display:"flex", gap:16, justifyContent:"center", fontSize:12, color:C.gray600 }}>
+            {planData.map(p=>(
+              <div key={p.name} style={{ display:"flex", alignItems:"center", gap:5 }}>
+                <div style={{ width:10,height:10,borderRadius:2,background:p.color }}/>
+                {p.name}
+              </div>
+            ))}
+          </div>
+        </Card>
+
+        {/* Plan breakdown */}
+        <Card>
+          <SectionHeader title="Revenue by Plan" />
+          {planData.map((p,i)=>(
+            <div key={p.name} style={{ marginBottom:16 }}>
+              <div style={{ display:"flex", justifyContent:"space-between", fontSize:13, marginBottom:5 }}>
+                <span style={{ fontWeight:500 }}>{p.name} (₹{p.name==="Basic"?"999":p.name==="Pro"?"2,999":"5,999"}/mo)</span>
+                <div style={{ textAlign:"right" }}>
+                  <div style={{ fontWeight:700 }}>₹{p.mrr.toLocaleString()}</div>
+                  <div style={{ fontSize:11, color:C.gray400 }}>{p.agents} agents</div>
+                </div>
+              </div>
+              <div style={{ height:8, background:C.gray200, borderRadius:4 }}>
+                <div style={{ height:"100%", width:`${p.pct}%`, background:p.color, borderRadius:4 }}/>
+              </div>
+            </div>
+          ))}
+          <div style={{ paddingTop:12, borderTop:`1px solid ${C.gray200}` }}>
+            <div style={{ display:"flex", justifyContent:"space-between", fontSize:13 }}>
+              <span style={{ color:C.gray600 }}>Total MRR</span>
+              <span style={{ fontWeight:700 }}>₹{totalMRR.toLocaleString()}</span>
+            </div>
+            <div style={{ display:"flex", justifyContent:"space-between", fontSize:13, marginTop:6 }}>
+              <span style={{ color:C.gray600 }}>GST (18%)</span>
+              <span style={{ fontWeight:600 }}>₹{totalGST.toLocaleString()}</span>
+            </div>
+            <div style={{ display:"flex", justifyContent:"space-between", fontSize:14, marginTop:8,
+              paddingTop:8, borderTop:`1px solid ${C.gray200}`, fontWeight:700 }}>
+              <span>Total Invoiced</span>
+              <span style={{ color:C.blue }}>₹{netRevenue.toLocaleString()}</span>
+            </div>
+          </div>
+        </Card>
+      </div>
+
+      {/* Transaction table */}
+      <Card>
+        <SectionHeader title="Recent Transactions"
+          action={<Btn size="sm">View all</Btn>} />
+        <Table
+          cols={["Invoice","Agent","Plan","Amount","GST","Total","Date","Status"]}
+          rows={[
+            {n:"INV-2024-000342",a:"Sharma Homes",p:"Premium",amt:"₹5,999",g:"₹1,080",t:"₹7,079",d:"20 Apr 2024"},
+            {n:"INV-2024-000341",a:"BLR Spaces",p:"Premium",amt:"₹5,999",g:"₹1,080",t:"₹7,079",d:"19 Apr 2024"},
+            {n:"INV-2024-000340",a:"Lakshmi Estates",p:"Pro",amt:"₹2,999",g:"₹540",t:"₹3,539",d:"18 Apr 2024"},
+            {n:"INV-2024-000339",a:"Ravi Realty",p:"Pro",amt:"₹2,999",g:"₹540",t:"₹3,539",d:"17 Apr 2024"},
+            {n:"INV-2024-000338",a:"Patel Properties",p:"Basic",amt:"₹999",g:"₹180",t:"₹1,179",d:"16 Apr 2024"},
+          ].map(r=>[
+            <span style={{fontSize:12,fontFamily:"monospace",color:C.blue}}>{r.n}</span>,
+            <span style={{fontWeight:500}}>{r.a}</span>,
+            <Badge color={r.p==="Premium"?"blue":r.p==="Pro"?"purple":"gray"} small>{r.p}</Badge>,
+            r.amt, r.g,
+            <span style={{fontWeight:700}}>{r.t}</span>,
+            <span style={{fontSize:12,color:C.gray600}}>{r.d}</span>,
+            <Badge color="green" small>Paid</Badge>,
+          ])}
+        />
+      </Card>
+
+      {/* Churn + Growth metrics */}
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:12, marginTop:16 }}>
+        {[
+          {label:"New Subscriptions",value:"6",sub:"This month",icon:"📈"},
+          {label:"Upgrades",value:"3",sub:"Basic→Pro or Pro→Premium",icon:"⬆️"},
+          {label:"Cancellations",value:"1",sub:"This month",icon:"❌"},
+          {label:"Churn Rate",value:"2.1%",sub:"Monthly churn",icon:"📊"},
+        ].map(m=>(
+          <Card key={m.label}>
+            <div style={{fontSize:20,marginBottom:6}}>{m.icon}</div>
+            <div style={{fontSize:22,fontWeight:700}}>{m.value}</div>
+            <div style={{fontSize:12,fontWeight:500,color:C.gray800}}>{m.label}</div>
+            <div style={{fontSize:11,color:C.gray400,marginTop:2}}>{m.sub}</div>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── VISIT SCHEDULING MODAL (used inside Detail screen) ───────
+function VisitScheduleModal({ prop, onClose }) {
+  const [step, setStep] = useState(0); // 0=form, 1=success
+  const [date, setDate] = useState("");
+  const [slot, setSlot] = useState("MORNING");
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
+  const [notes, setNotes] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  // Generate next 14 available dates
+  const availDates = Array.from({length:14},(_,i)=>{
+    const d = new Date(); d.setDate(d.getDate()+i+1);
+    return { val:d.toISOString().split("T")[0],
+      label:d.toLocaleDateString("en-IN",{weekday:"short",day:"numeric",month:"short"}) };
+  }).filter(d=>!["Sat","Sun"].includes(d.label.split(" ")[0])); // exclude weekends
+
+  const handleSubmit = () => {
+    if (!name || !phone || !date) return;
+    setLoading(true);
+    // POST /api/v1/visits/property/:id
+    setTimeout(()=>{ setLoading(false); setStep(1); }, 1000);
+  };
+
+  const slots = [
+    {id:"MORNING",   label:"Morning",   time:"9 AM – 12 PM",  icon:"🌅"},
+    {id:"AFTERNOON", label:"Afternoon", time:"12 PM – 4 PM",  icon:"☀️"},
+    {id:"EVENING",   label:"Evening",   time:"4 PM – 7 PM",   icon:"🌆"},
+  ];
+
+  return (
+    <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.5)",
+      display:"flex", alignItems:"center", justifyContent:"center", zIndex:1000, padding:20 }}>
+      <div style={{ background:"#fff", borderRadius:16, padding:28, width:"100%", maxWidth:500,
+        maxHeight:"90vh", overflowY:"auto" }}>
+
+        {step === 1 ? (
+          <div style={{ textAlign:"center", padding:"20px 0" }}>
+            <div style={{ fontSize:56, marginBottom:12 }}>✅</div>
+            <h3 style={{ fontSize:20, fontWeight:700, marginBottom:8 }}>Visit Requested!</h3>
+            <p style={{ color:C.gray600, fontSize:14, marginBottom:6 }}>
+              Your visit request for <strong>{prop?.title}</strong> has been sent to the agent.
+            </p>
+            <p style={{ color:C.gray600, fontSize:13, marginBottom:20 }}>
+              📅 {availDates.find(d=>d.val===date)?.label} · {slots.find(s=>s.id===slot)?.time}
+            </p>
+            <p style={{ color:C.gray400, fontSize:12, marginBottom:24 }}>
+              The agent will confirm or suggest an alternative time via call or WhatsApp.
+            </p>
+            <Btn variant="primary" fullWidth onClick={onClose}>Done</Btn>
+          </div>
+        ) : (
+          <>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:20 }}>
+              <div>
+                <h3 style={{ fontSize:16, fontWeight:700, margin:0 }}>Schedule a Visit</h3>
+                <div style={{ fontSize:12, color:C.gray600, marginTop:2 }}>{prop?.title}</div>
+              </div>
+              <button onClick={onClose} style={{ background:"none", border:"none", fontSize:20,
+                cursor:"pointer", color:C.gray400 }}>✕</button>
+            </div>
+
+            {/* Date picker */}
+            <div style={{ marginBottom:16 }}>
+              <div style={{ fontSize:12, fontWeight:500, color:C.gray600, marginBottom:8 }}>
+                Preferred date <span style={{color:C.red}}>*</span>
+              </div>
+              <div style={{ display:"flex", gap:6, overflowX:"auto", paddingBottom:4 }}>
+                {availDates.slice(0,10).map(d=>(
+                  <button key={d.val} onClick={()=>setDate(d.val)}
+                    style={{ flexShrink:0, padding:"8px 12px", borderRadius:8, cursor:"pointer",
+                      border:`1px solid ${date===d.val?C.blue:C.gray300}`,
+                      background:date===d.val?C.blueLight:"transparent",
+                      color:date===d.val?C.blue:C.gray600,
+                      fontFamily:"inherit", textAlign:"center", minWidth:64 }}>
+                    <div style={{ fontSize:11, fontWeight:500 }}>{d.label.split(" ")[0]}</div>
+                    <div style={{ fontSize:14, fontWeight:700 }}>{d.label.split(" ")[1]}</div>
+                    <div style={{ fontSize:10 }}>{d.label.split(" ")[2]}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Time slot */}
+            <div style={{ marginBottom:16 }}>
+              <div style={{ fontSize:12, fontWeight:500, color:C.gray600, marginBottom:8 }}>Preferred time</div>
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:8 }}>
+                {slots.map(s=>(
+                  <button key={s.id} onClick={()=>setSlot(s.id)}
+                    style={{ padding:"10px 8px", borderRadius:10, cursor:"pointer", textAlign:"center",
+                      border:`2px solid ${slot===s.id?C.blue:C.gray300}`,
+                      background:slot===s.id?C.blueLight:"transparent",
+                      fontFamily:"inherit", transition:"all .15s" }}>
+                    <div style={{ fontSize:20 }}>{s.icon}</div>
+                    <div style={{ fontSize:12, fontWeight:600, color:slot===s.id?C.blue:C.gray800, marginTop:4 }}>{s.label}</div>
+                    <div style={{ fontSize:10, color:C.gray400 }}>{s.time}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <Input label="Your name" placeholder="Amit Singh" required value={name} onChange={e=>setName(e.target.value)}/>
+            <Input label="Mobile number" type="tel" placeholder="9876543210" required value={phone} onChange={e=>setPhone(e.target.value)}/>
+            <Input label="Email (optional)" type="email" placeholder="amit@email.com" value={email} onChange={e=>setEmail(e.target.value)}/>
+            <Input label="Notes for agent (optional)" placeholder="Parking availability, specific rooms to see, etc."
+              rows={2} value={notes} onChange={e=>setNotes(e.target.value)}/>
+
+            <Btn variant="primary" fullWidth onClick={handleSubmit} disabled={loading || !name || !phone || !date}>
+              {loading ? "Submitting…" : "Request Visit →"}
+            </Btn>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+
+// ─── Root App (UPDATED) ────────────────────────────────────────
+
+// ═══════════════════════════════════════════════════════════════
+// COMPANY INFO — single source of truth for all pages
+// ═══════════════════════════════════════════════════════════════
+const COMPANY = {
+  name:        "PropVault",
+  tagline:     "India’s Trusted Multi-Vendor Real Estate Marketplace",
+  description: "PropVault connects serious buyers with verified agents across India. Search, compare, and enquire on thousands of residential and commercial listings — all in one place.",
+  address: {
+    line1:  "Office No. 410, 4th Floor",
+    line2:  "South Ex Tower, Masjid Moth",
+    line3:  "NDSE Part 2",
+    city:   "New Delhi",
+    pin:    "110049",
+    state:  "Delhi",
+    full:   "Office No. 410, 4th Floor, South Ex Tower, Masjid Moth, NDSE Part 2, New Delhi – 110049",
+  },
+  phone:    "+91 11 4567 8900",
+  mobile:   "+91 98100 00000",
+  email:    "hello@propvault.in",
+  support:  "support@propvault.in",
+  legal:    "legal@propvault.in",
+  website:  "https://propvault.in",
+  gstin:    "07AABCP1234F1ZX",
+  rera:     "RERA/DL/AG/2024/0001",
+  hours:    "Mon – Sat, 9:00 AM – 6:00 PM IST",
+  social: {
+    linkedin:  "https://linkedin.com/company/propvault",
+    twitter:   "https://twitter.com/propvault",
+    facebook:  "https://facebook.com/propvault",
+    instagram: "https://instagram.com/propvault",
+    youtube:   "https://youtube.com/@propvault",
+  },
+};
+
+// ═══════════════════════════════════════════════════════════════
+// SITE HEADER — public marketing header (guests + public pages)
+// ═══════════════════════════════════════════════════════════════
+function SiteHeader({ screen, setScreen, isLoggedIn, role }) {
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  const navLinks = [
+    { id:"home",      label:"Home" },
+    { id:"search",    label:"Properties" },
+    { id:"pub-agents",label:"Agents" },
+    { id:"resources", label:"Resources" },
+    { id:"about",     label:"About" },
+    { id:"contact",   label:"Contact" },
+  ];
+
+  const activeBg  = C.blueLight;
+  const activeClr = C.blue;
+
+  return (
+    <header style={{
+      background: C.white,
+      borderBottom: `1px solid ${C.gray300}`,
+      position: "sticky", top: 0, zIndex: 200,
+    }}>
+      {/* Top bar — address strip */}
+      <div style={{
+        background: C.blue, color: "#fff",
+        fontSize: 11, padding: "5px 32px",
+        display: "flex", justifyContent: "space-between", alignItems: "center",
+      }}>
+        <span>📍 {COMPANY.address.full}</span>
+        <div style={{ display:"flex", gap:20 }}>
+          <span>📞 {COMPANY.phone}</span>
+          <span>✉️ {COMPANY.email}</span>
+          <span>🕐 {COMPANY.hours}</span>
+        </div>
+      </div>
+
+      {/* Main nav */}
+      <div style={{
+        padding: "0 32px", height: 62,
+        display: "flex", alignItems: "center", gap: 8,
+      }}>
+        {/* Logo */}
+        <div
+          onClick={() => setScreen("home")}
+          style={{ cursor:"pointer", display:"flex", alignItems:"center", gap:10, marginRight:16 }}>
+          <div style={{
+            width: 36, height: 36, borderRadius: 8,
+            background: `linear-gradient(135deg, ${C.blue}, ${C.blueDark})`,
+            display:"flex", alignItems:"center", justifyContent:"center",
+            color:"#fff", fontWeight:800, fontSize:16,
+          }}>P</div>
+          <div>
+            <div style={{ fontSize:18, fontWeight:800, color:C.gray800, lineHeight:1 }}>
+              <span style={{ color:C.blue }}>Prop</span>Vault
+            </div>
+            <div style={{ fontSize:9, color:C.gray600, letterSpacing:".06em", textTransform:"uppercase" }}>
+              Real Estate Marketplace
+            </div>
+          </div>
+        </div>
+
+        {/* Nav links */}
+        <nav style={{ display:"flex", gap:2, flex:1 }}>
+          {navLinks.map(n => (
+            <button key={n.id} onClick={() => setScreen(n.id)}
+              style={{
+                padding: "6px 14px", borderRadius: 8, border:"none", cursor:"pointer",
+                background: screen===n.id ? activeBg : "transparent",
+                color: screen===n.id ? activeClr : C.gray700,
+                fontWeight: screen===n.id ? 600 : 400,
+                fontSize: 13, fontFamily:"inherit",
+                transition: "all .15s",
+              }}>
+              {n.label}
+            </button>
+          ))}
+        </nav>
+
+        {/* CTA buttons */}
+        <div style={{ display:"flex", gap:8, alignItems:"center" }}>
+          {isLoggedIn ? (
+            <Btn variant="primary" onClick={() => setScreen(
+              role==="agent" ? "agent-dash" : role==="admin" ? "admin-dash" : "buyer-dash"
+            )}>My Dashboard</Btn>
+          ) : (
+            <>
+              <Btn onClick={() => setScreen("auth")}>Sign In</Btn>
+              <Btn variant="primary" onClick={() => setScreen("auth")}>List Your Property</Btn>
+            </>
+          )}
+        </div>
+      </div>
+    </header>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SITE FOOTER — rich footer shown on all public/marketing pages
+// ═══════════════════════════════════════════════════════════════
+function SiteFooter({ setScreen }) {
+  const col = (title, links) => (
+    <div>
+      <div style={{ fontSize:12, fontWeight:700, color:C.gray800, textTransform:"uppercase",
+        letterSpacing:".08em", marginBottom:14 }}>{title}</div>
+      {links.map(([label, screen, href]) => (
+        <div key={label} style={{ marginBottom:8 }}>
+          {href ? (
+            <a href={href} target="_blank" rel="noopener noreferrer"
+              style={{ color:C.gray600, fontSize:13, textDecoration:"none" }}>
+              {label}
+            </a>
+          ) : (
+            <button onClick={() => setScreen(screen)}
+              style={{ background:"none", border:"none", cursor:"pointer",
+                color:C.gray600, fontSize:13, fontFamily:"inherit",
+                padding:0, textAlign:"left" }}>
+              {label}
+            </button>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+
+  return (
+    <footer style={{ background:C.gray800, color:"#fff", marginTop:0 }}>
+      {/* Main footer grid */}
+      <div style={{ maxWidth:1200, margin:"0 auto", padding:"56px 32px 40px" }}>
+        <div style={{ display:"grid", gridTemplateColumns:"2fr 1fr 1fr 1fr 1.5fr", gap:40, marginBottom:48 }}>
+
+          {/* Brand column */}
+          <div>
+            <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:16 }}>
+              <div style={{
+                width:36, height:36, borderRadius:8,
+                background:`linear-gradient(135deg,${C.blue},${C.blueDark})`,
+                display:"flex", alignItems:"center", justifyContent:"center",
+                color:"#fff", fontWeight:800, fontSize:16,
+              }}>P</div>
+              <div style={{ fontSize:20, fontWeight:800, color:"#fff" }}>
+                <span style={{ color:"#85B7EB" }}>Prop</span>Vault
+              </div>
+            </div>
+            <p style={{ fontSize:13, color:"#9CA3AF", lineHeight:1.7, margin:"0 0 20px" }}>
+              {COMPANY.description}
+            </p>
+            {/* Social icons */}
+            <div style={{ display:"flex", gap:10 }}>
+              {[
+                ["in", COMPANY.social.linkedin],
+                ["tw", COMPANY.social.twitter],
+                ["fb", COMPANY.social.facebook],
+                ["ig", COMPANY.social.instagram],
+                ["yt", COMPANY.social.youtube],
+              ].map(([lbl, href]) => (
+                <a key={lbl} href={href} target="_blank" rel="noopener noreferrer"
+                  style={{
+                    width:32, height:32, borderRadius:8,
+                    background:"rgba(255,255,255,.1)", color:"#9CA3AF",
+                    display:"flex", alignItems:"center", justifyContent:"center",
+                    fontSize:11, fontWeight:700, textDecoration:"none", transition:"background .15s",
+                  }}
+                  onMouseEnter={e=>e.currentTarget.style.background="rgba(255,255,255,.2)"}
+                  onMouseLeave={e=>e.currentTarget.style.background="rgba(255,255,255,.1)"}>
+                  {lbl.toUpperCase()}
+                </a>
+              ))}
+            </div>
+          </div>
+
+          {/* Buyers */}
+          {col("For Buyers", [
+            ["Search Properties",  "search"],
+            ["Map View",           "map-search"],
+            ["Compare Properties", "compare"],
+            ["Saved Properties",   "favorites"],
+            ["Buyer Dashboard",    "buyer-dash"],
+            ["Book a Site Visit",  "search"],
+          ])}
+
+          {/* Agents */}
+          {col("For Agents", [
+            ["List Your Property", "auth"],
+            ["Agent Dashboard",    "agent-dash"],
+            ["Subscription Plans", "subscription"],
+            ["Analytics",          "analytics"],
+            ["Lead Management",    "leads"],
+            ["Agent Resources",    "resources"],
+          ])}
+
+          {/* Company */}
+          {col("Company", [
+            ["About PropVault",  "about"],
+            ["Resources & Blog", "resources"],
+            ["Contact Us",       "contact"],
+            ["Careers",          null, COMPANY.website],
+            ["Press & Media",    null, COMPANY.website],
+            ["Partner With Us",  "contact"],
+          ])}
+
+          {/* Contact column */}
+          <div>
+            <div style={{ fontSize:12, fontWeight:700, color:C.gray800, textTransform:"uppercase",
+              letterSpacing:".08em", marginBottom:14, color:"#fff" }}>Contact</div>
+            {[
+              ["📍", COMPANY.address.full],
+              ["📞", COMPANY.phone],
+              ["📱", COMPANY.mobile],
+              ["✉️", COMPANY.email],
+              ["🛠", COMPANY.support],
+              ["🕐", COMPANY.hours],
+            ].map(([ic, val]) => (
+              <div key={val} style={{ display:"flex", gap:8, marginBottom:10, alignItems:"flex-start" }}>
+                <span style={{ flexShrink:0, fontSize:14 }}>{ic}</span>
+                <span style={{ fontSize:12, color:"#9CA3AF", lineHeight:1.5 }}>{val}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* RERA / GSTIN trust bar */}
+        <div style={{
+          borderTop:"1px solid rgba(255,255,255,.1)",
+          paddingTop:24, marginBottom:24,
+          display:"flex", gap:32, flexWrap:"wrap",
+        }}>
+          {[
+            ["RERA Registered", COMPANY.rera],
+            ["GSTIN", COMPANY.gstin],
+            ["CIN", "U70100DL2024PTC123456"],
+            ["Established", "2024"],
+          ].map(([l,v]) => (
+            <div key={l}>
+              <div style={{ fontSize:10, color:"#6B7280", textTransform:"uppercase", letterSpacing:".06em" }}>{l}</div>
+              <div style={{ fontSize:12, color:"#D1D5DB", fontFamily:"monospace", marginTop:2 }}>{v}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Bottom bar */}
+        <div style={{
+          borderTop:"1px solid rgba(255,255,255,.08)",
+          paddingTop:20,
+          display:"flex", justifyContent:"space-between", alignItems:"center", flexWrap:"wrap", gap:12,
+        }}>
+          <div style={{ fontSize:12, color:"#6B7280" }}>
+            © {new Date().getFullYear()} PropVault Technologies Pvt. Ltd. All rights reserved.
+          </div>
+          <div style={{ display:"flex", gap:20 }}>
+            {[["Privacy Policy","contact"],["Terms of Service","contact"],
+              ["Cookie Policy","contact"],["Disclaimer","contact"],["Sitemap","home"]].map(([l,s]) => (
+              <button key={l} onClick={() => setScreen(s)}
+                style={{ background:"none", border:"none", cursor:"pointer",
+                  color:"#6B7280", fontSize:12, fontFamily:"inherit" }}>
+                {l}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    </footer>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// HOME PAGE — marketing landing page
+// ═══════════════════════════════════════════════════════════════
+function HomePage({ setScreen, setDetailProp }) {
+  const stats = [
+    ["10,000+", "Properties Listed"],
+    ["2,500+",  "Verified Agents"],
+    ["50,000+", "Happy Buyers"],
+    ["35+",     "Cities Covered"],
+  ];
+
+  const howSteps = [
+    { icon:"🔍", title:"Search", desc:"Browse thousands of verified listings filtered by city, type, price, and amenities." },
+    { icon:"📞", title:"Connect", desc:"Contact agents directly via call, WhatsApp, or in-app enquiry — zero brokerage hidden fees." },
+    { icon:"📅", title:"Visit",   desc:"Schedule a site visit at a time that works for you. Agent confirms within 24 hours." },
+    { icon:"🔑", title:"Move In", desc:"Close the deal with full transaction support from our verified agent network." },
+  ];
+
+  const testimonials = [
+    { name:"Priya Sharma", city:"Delhi", text:"Found my dream 3 BHK in Vasant Kunj within 2 weeks. The site visit scheduling was so smooth!", rating:5 },
+    { name:"Rahul Mehra",  city:"Mumbai", text:"PropVault’s agent network is top-notch. Got 3 serious offers on my listing within 48 hours.", rating:5 },
+    { name:"Kavitha R.",   city:"Bangalore", text:"Compared 6 properties side by side and booked a visit for all three in one afternoon. Excellent UX.", rating:5 },
+  ];
+
+  return (
+    <div>
+      {/* Hero */}
+      <div style={{
+        background:`linear-gradient(135deg, ${C.blueDark} 0%, ${C.blue} 60%, #2176C7 100%)`,
+        color:"#fff", padding:"80px 32px", textAlign:"center",
+      }}>
+        <div style={{ maxWidth:720, margin:"0 auto" }}>
+          <div style={{ fontSize:11, fontWeight:600, letterSpacing:".12em", textTransform:"uppercase",
+            background:"rgba(255,255,255,.15)", display:"inline-block",
+            padding:"4px 14px", borderRadius:20, marginBottom:20, color:"#B5D4F4" }}>
+            India’s Most Trusted Real Estate Marketplace
+          </div>
+          <h1 style={{ fontSize:46, fontWeight:800, margin:"0 0 20px", lineHeight:1.15 }}>
+            Find Your Perfect<br/>
+            <span style={{ color:"#85B7EB" }}>Property in India</span>
+          </h1>
+          <p style={{ fontSize:17, opacity:.85, marginBottom:36, lineHeight:1.7 }}>
+            Search verified listings across {">"}35 Indian cities. Connect with RERA-registered agents.
+            Schedule site visits in seconds.
+          </p>
+
+          {/* Search bar */}
+          <div style={{
+            background:"#fff", borderRadius:12, padding:"10px 10px 10px 20px",
+            display:"flex", gap:8, maxWidth:640, margin:"0 auto 32px", boxShadow:"0 8px 30px rgba(0,0,0,.2)",
+          }}>
+            <input
+              placeholder="Search by city, locality, or project name…"
+              style={{
+                flex:1, border:"none", outline:"none", fontSize:15,
+                fontFamily:"inherit", color:C.gray800, background:"transparent",
+              }}
+              onKeyDown={e => e.key==="Enter" && setScreen("search")}
+            />
+            <button onClick={() => setScreen("search")} style={{
+              background:C.blue, color:"#fff", border:"none", borderRadius:8,
+              padding:"10px 24px", fontSize:14, fontWeight:600, cursor:"pointer", fontFamily:"inherit",
+            }}>
+              Search
+            </button>
+          </div>
+
+          {/* Quick filters */}
+          <div style={{ display:"flex", gap:8, justifyContent:"center", flexWrap:"wrap" }}>
+            {["Delhi NCR","Mumbai","Bangalore","Pune","Hyderabad","Chennai"].map(city => (
+              <button key={city} onClick={() => setScreen("search")}
+                style={{
+                  background:"rgba(255,255,255,.15)", border:"1px solid rgba(255,255,255,.25)",
+                  color:"#fff", padding:"5px 14px", borderRadius:20, fontSize:12,
+                  cursor:"pointer", fontFamily:"inherit",
+                }}>
+                {city}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Stats bar */}
+      <div style={{ background:C.white, borderBottom:`1px solid ${C.gray300}` }}>
+        <div style={{ maxWidth:1100, margin:"0 auto", padding:"28px 32px",
+          display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:0 }}>
+          {stats.map(([val, label], i) => (
+            <div key={label} style={{
+              textAlign:"center", padding:"0 24px",
+              borderRight: i < 3 ? `1px solid ${C.gray300}` : "none",
+            }}>
+              <div style={{ fontSize:28, fontWeight:800, color:C.blue }}>{val}</div>
+              <div style={{ fontSize:13, color:C.gray600, marginTop:4 }}>{label}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Featured properties */}
+      <div style={{ maxWidth:1100, margin:"0 auto", padding:"56px 32px" }}>
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:28 }}>
+          <div>
+            <h2 style={{ fontSize:24, fontWeight:700, margin:"0 0 6px" }}>Featured Properties</h2>
+            <p style={{ fontSize:14, color:C.gray600, margin:0 }}>Hand-picked listings from our top verified agents</p>
+          </div>
+          <Btn onClick={() => setScreen("search")}>View All Properties →</Btn>
+        </div>
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:20 }}>
+          {PROPERTIES.filter(p=>p.featured).slice(0,3).map(p => (
+            <PropertyCard key={p.id} prop={p} favs={[]}
+              onView={prop => { setDetailProp(prop); setScreen("detail"); }}
+              onFav={() => {}} />
+          ))}
+        </div>
+      </div>
+
+      {/* How it works */}
+      <div style={{ background:C.gray100, padding:"56px 32px" }}>
+        <div style={{ maxWidth:1100, margin:"0 auto" }}>
+          <div style={{ textAlign:"center", marginBottom:40 }}>
+            <h2 style={{ fontSize:24, fontWeight:700, margin:"0 0 8px" }}>How PropVault Works</h2>
+            <p style={{ fontSize:14, color:C.gray600, margin:0 }}>From search to keys in hand — in four simple steps</p>
+          </div>
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:20 }}>
+            {howSteps.map((s, i) => (
+              <div key={s.title} style={{
+                background:C.white, borderRadius:12, padding:"28px 24px", textAlign:"center",
+                border:`1px solid ${C.gray300}`, position:"relative",
+              }}>
+                <div style={{
+                  position:"absolute", top:-14, left:"50%", transform:"translateX(-50%)",
+                  width:28, height:28, borderRadius:"50%",
+                  background:C.blue, color:"#fff", fontSize:13, fontWeight:700,
+                  display:"flex", alignItems:"center", justifyContent:"center",
+                }}>{i+1}</div>
+                <div style={{ fontSize:36, marginBottom:14, marginTop:8 }}>{s.icon}</div>
+                <div style={{ fontSize:15, fontWeight:600, marginBottom:8 }}>{s.title}</div>
+                <div style={{ fontSize:13, color:C.gray600, lineHeight:1.6 }}>{s.desc}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Testimonials */}
+      <div style={{ maxWidth:1100, margin:"0 auto", padding:"56px 32px" }}>
+        <div style={{ textAlign:"center", marginBottom:36 }}>
+          <h2 style={{ fontSize:24, fontWeight:700, margin:"0 0 8px" }}>What Our Users Say</h2>
+          <p style={{ fontSize:14, color:C.gray600, margin:0 }}>Thousands of successful transactions and counting</p>
+        </div>
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:20 }}>
+          {testimonials.map(t => (
+            <div key={t.name} style={{
+              background:C.white, borderRadius:12, padding:"24px",
+              border:`1px solid ${C.gray300}`,
+            }}>
+              <div style={{ color:C.amber, fontSize:16, marginBottom:12 }}>
+                {"★".repeat(t.rating)}
+              </div>
+              <p style={{ fontSize:13, color:C.gray700, lineHeight:1.7, margin:"0 0 16px", fontStyle:"italic" }}>
+                "{t.text}"
+              </p>
+              <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                <div style={{
+                  width:36, height:36, borderRadius:"50%", background:C.blueLight,
+                  display:"flex", alignItems:"center", justifyContent:"center",
+                  fontWeight:700, color:C.blue,
+                }}>{t.name[0]}</div>
+                <div>
+                  <div style={{ fontSize:13, fontWeight:600 }}>{t.name}</div>
+                  <div style={{ fontSize:11, color:C.gray600 }}>{t.city}</div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* For Agents CTA */}
+      <div style={{ background:`linear-gradient(135deg,${C.blue},${C.blueDark})`, padding:"56px 32px" }}>
+        <div style={{ maxWidth:700, margin:"0 auto", textAlign:"center", color:"#fff" }}>
+          <h2 style={{ fontSize:26, fontWeight:700, margin:"0 0 14px" }}>Are You a Real Estate Agent?</h2>
+          <p style={{ fontSize:15, opacity:.85, marginBottom:28, lineHeight:1.7 }}>
+            Join 2,500+ verified agents on PropVault. List unlimited properties, manage leads,
+            and grow your business with our Pro and Premium plans starting at just ₹999/month.
+          </p>
+          <div style={{ display:"flex", gap:12, justifyContent:"center" }}>
+            <button onClick={() => setScreen("auth")} style={{
+              background:"#fff", color:C.blue, border:"none", borderRadius:8,
+              padding:"12px 28px", fontWeight:700, fontSize:14, cursor:"pointer", fontFamily:"inherit",
+            }}>
+              Start Free Trial
+            </button>
+            <button onClick={() => setScreen("resources")} style={{
+              background:"rgba(255,255,255,.15)", color:"#fff",
+              border:"1px solid rgba(255,255,255,.35)", borderRadius:8,
+              padding:"12px 28px", fontWeight:600, fontSize:14, cursor:"pointer", fontFamily:"inherit",
+            }}>
+              View Agent Plans
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ABOUT PAGE
+// ═══════════════════════════════════════════════════════════════
+function AboutPage({ setScreen }) {
+  const team = [
+    { name:"Arjun Malhotra",  role:"Founder & CEO",          city:"New Delhi",  initial:"A" },
+    { name:"Sunita Rao",      role:"Co-Founder & COO",        city:"Bangalore",  initial:"S" },
+    { name:"Vikram Chopra",   role:"Chief Technology Officer", city:"Delhi",      initial:"V" },
+    { name:"Pooja Nair",      role:"Head of Agent Relations",  city:"Mumbai",     initial:"P" },
+    { name:"Rohan Sharma",    role:"Head of Product",          city:"Gurgaon",    initial:"R" },
+    { name:"Deepa Krishnan",  role:"Head of Marketing",        city:"Chennai",    initial:"D" },
+  ];
+
+  const milestones = [
+    { year:"2024 Q1", label:"PropVault founded",          desc:"Launched in Delhi NCR with 50 seed listings" },
+    { year:"2024 Q2", label:"Pan-India expansion",         desc:"Expanded to 12 cities; 500+ agents onboarded" },
+    { year:"2024 Q3", label:"₹2 Cr monthly GMV",           desc:"Crossed ₹2 Cr in gross merchandise value" },
+    { year:"2024 Q4", label:"Series A fundraise",          desc:"Raised ₹12 Cr from top real estate investors" },
+    { year:"2025 Q1", label:"10,000 listings milestone",   desc:"India’s fastest-growing real estate portal" },
+  ];
+
+  const values = [
+    { icon:"🔒", title:"Verified First",  desc:"Every agent is RERA-verified. Every listing is manually reviewed before going live." },
+    { icon:"💸", title:"Zero Hidden Fees",desc:"What you see is what you pay. No surprise commissions. Transparent pricing always." },
+    { icon:"⚡", title:"Speed",           desc:"Most enquiries get a response within 2 hours. Site visits confirmed within 24 hours." },
+    { icon:"🤝", title:"Agent-Centric",   desc:"We believe agents are the backbone of real estate. Our platform is built to empower them." },
+  ];
+
+  return (
+    <div>
+      {/* Hero */}
+      <div style={{ background:`linear-gradient(135deg,${C.blue},${C.blueDark})`,
+        color:"#fff", padding:"64px 32px", textAlign:"center" }}>
+        <div style={{ maxWidth:680, margin:"0 auto" }}>
+          <h1 style={{ fontSize:36, fontWeight:800, margin:"0 0 16px" }}>About PropVault</h1>
+          <p style={{ fontSize:16, opacity:.85, lineHeight:1.7 }}>
+            We’re on a mission to make finding, listing, and transacting real estate
+            in India as transparent and efficient as possible.
+          </p>
+        </div>
+      </div>
+
+      <div style={{ maxWidth:1100, margin:"0 auto", padding:"56px 32px" }}>
+        {/* Mission + address */}
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:40, marginBottom:56 }}>
+          <div>
+            <h2 style={{ fontSize:22, fontWeight:700, margin:"0 0 16px" }}>Our Mission</h2>
+            <p style={{ fontSize:14, color:C.gray600, lineHeight:1.8, marginBottom:16 }}>
+              The Indian real estate market is one of the largest and most complex in the world.
+              Yet finding the right property — or the right agent — has always involved too much
+              friction: unverified listings, opaque pricing, and agents who disappear after first contact.
+            </p>
+            <p style={{ fontSize:14, color:C.gray600, lineHeight:1.8, marginBottom:16 }}>
+              PropVault was founded to change that. We built a platform where every agent is
+              RERA-verified, every listing goes through manual review, and every buyer can
+              schedule a site visit in seconds.
+            </p>
+            <p style={{ fontSize:14, color:C.gray600, lineHeight:1.8 }}>
+              Headquartered in South Delhi, we operate across 35+ cities and are growing fast.
+            </p>
+          </div>
+          {/* Office card */}
+          <div style={{ background:C.blueLight, borderRadius:14, padding:28,
+            border:`1px solid ${C.blue}22` }}>
+            <div style={{ fontSize:14, fontWeight:700, color:C.blue, marginBottom:16 }}>
+              🏢 Registered Office
+            </div>
+            {[
+              ["Address",   COMPANY.address.full],
+              ["Phone",     COMPANY.phone],
+              ["Mobile",    COMPANY.mobile],
+              ["Email",     COMPANY.email],
+              ["RERA",      COMPANY.rera],
+              ["GSTIN",     COMPANY.gstin],
+              ["Hours",     COMPANY.hours],
+            ].map(([l, v]) => (
+              <div key={l} style={{ display:"flex", gap:12, marginBottom:10, fontSize:13 }}>
+                <span style={{ color:C.blue, minWidth:68, fontWeight:500 }}>{l}</span>
+                <span style={{ color:C.gray700, lineHeight:1.5 }}>{v}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Values */}
+        <h2 style={{ fontSize:22, fontWeight:700, margin:"0 0 24px" }}>Our Values</h2>
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:16, marginBottom:56 }}>
+          {values.map(v => (
+            <div key={v.title} style={{ background:C.white, borderRadius:12, padding:"24px 20px",
+              border:`1px solid ${C.gray300}`, textAlign:"center" }}>
+              <div style={{ fontSize:32, marginBottom:12 }}>{v.icon}</div>
+              <div style={{ fontSize:14, fontWeight:600, marginBottom:8 }}>{v.title}</div>
+              <div style={{ fontSize:12, color:C.gray600, lineHeight:1.6 }}>{v.desc}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Timeline */}
+        <h2 style={{ fontSize:22, fontWeight:700, margin:"0 0 28px" }}>Our Journey</h2>
+        <div style={{ position:"relative", marginBottom:56 }}>
+          <div style={{ position:"absolute", left:80, top:0, bottom:0, width:2,
+            background:C.gray300, zIndex:0 }}/>
+          {milestones.map((m, i) => (
+            <div key={m.year} style={{ display:"flex", gap:24, marginBottom:28, position:"relative" }}>
+              <div style={{ width:80, flexShrink:0, paddingTop:2, textAlign:"right",
+                fontSize:11, fontWeight:600, color:C.blue }}>{m.year}</div>
+              <div style={{ width:12, height:12, borderRadius:"50%", background:C.blue,
+                border:"3px solid #fff", boxShadow:`0 0 0 2px ${C.blue}`,
+                flexShrink:0, marginTop:3, zIndex:1 }}/>
+              <div>
+                <div style={{ fontSize:14, fontWeight:600, marginBottom:4 }}>{m.label}</div>
+                <div style={{ fontSize:13, color:C.gray600 }}>{m.desc}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Team */}
+        <h2 style={{ fontSize:22, fontWeight:700, margin:"0 0 24px" }}>Leadership Team</h2>
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:16, marginBottom:40 }}>
+          {team.map(t => (
+            <div key={t.name} style={{ background:C.white, borderRadius:12, padding:"20px 18px",
+              border:`1px solid ${C.gray300}`, display:"flex", alignItems:"center", gap:14 }}>
+              <div style={{ width:48, height:48, borderRadius:"50%", background:C.blueLight,
+                display:"flex", alignItems:"center", justifyContent:"center",
+                fontWeight:700, color:C.blue, fontSize:20, flexShrink:0 }}>{t.initial}</div>
+              <div>
+                <div style={{ fontSize:14, fontWeight:600 }}>{t.name}</div>
+                <div style={{ fontSize:12, color:C.blue, marginBottom:2 }}>{t.role}</div>
+                <div style={{ fontSize:11, color:C.gray600 }}>📍 {t.city}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div style={{ textAlign:"center" }}>
+          <Btn variant="primary" onClick={() => setScreen("contact")}>Get in Touch →</Btn>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CONTACT PAGE
+// ═══════════════════════════════════════════════════════════════
+function ContactPage({ setScreen }) {
+  const [form, setForm] = useState({ name:"", email:"", phone:"", subject:"general", message:"" });
+  const [sent, setSent] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const set = k => e => setForm(f => ({ ...f, [k]: e.target.value }));
+
+  const handleSubmit = () => {
+    if (!form.name || !form.email || !form.message) return;
+    setLoading(true);
+    setTimeout(() => { setLoading(false); setSent(true); }, 1000);
+  };
+
+  const offices = [
+    {
+      type:"Head Office",
+      address: COMPANY.address.full,
+      phone: COMPANY.phone,
+      mobile: COMPANY.mobile,
+      email: COMPANY.email,
+      hours: COMPANY.hours,
+      metro: "Nearest Metro: AIIMS Station (Yellow Line) — 10 min walk",
+    },
+  ];
+
+  const departments = [
+    { dept:"General Enquiries",    email:COMPANY.email,   desc:"For general questions about PropVault" },
+    { dept:"Agent Support",        email:COMPANY.support, desc:"Listing issues, account queries, billing" },
+    { dept:"Buyer Assistance",     email:"buyers@propvault.in", desc:"Help finding properties or booking visits" },
+    { dept:"Legal & Compliance",   email:COMPANY.legal,   desc:"RERA, contracts, regulatory matters" },
+    { dept:"Press & Partnerships", email:"press@propvault.in",  desc:"Media enquiries and partnership proposals" },
+    { dept:"Careers",              email:"careers@propvault.in",desc:"Join the PropVault team" },
+  ];
+
+  return (
+    <div>
+      {/* Hero */}
+      <div style={{ background:`linear-gradient(135deg,${C.blue},${C.blueDark})`,
+        color:"#fff", padding:"52px 32px", textAlign:"center" }}>
+        <div style={{ maxWidth:560, margin:"0 auto" }}>
+          <h1 style={{ fontSize:32, fontWeight:800, margin:"0 0 12px" }}>Contact Us</h1>
+          <p style={{ fontSize:15, opacity:.85, lineHeight:1.6 }}>
+            We’re here to help. Reach us by form, phone, or walk into our South Delhi office.
+          </p>
+        </div>
+      </div>
+
+      <div style={{ maxWidth:1100, margin:"0 auto", padding:"48px 32px" }}>
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:40, marginBottom:48 }}>
+
+          {/* Contact form */}
+          <div>
+            <h2 style={{ fontSize:20, fontWeight:700, margin:"0 0 20px" }}>Send us a Message</h2>
+            {sent ? (
+              <div style={{ background:C.greenLight, borderRadius:12, padding:"32px 24px",
+                textAlign:"center", border:`1px solid ${C.green}44` }}>
+                <div style={{ fontSize:40, marginBottom:12 }}>✅</div>
+                <div style={{ fontSize:16, fontWeight:600, color:C.green, marginBottom:8 }}>
+                  Message received!
+                </div>
+                <div style={{ fontSize:13, color:C.gray600, marginBottom:16 }}>
+                  We typically respond within 2 business hours.
+                </div>
+                <Btn onClick={() => { setSent(false); setForm({name:"",email:"",phone:"",subject:"general",message:""}); }}>
+                  Send another message
+                </Btn>
+              </div>
+            ) : (
+              <div style={{ background:C.white, borderRadius:12, padding:24, border:`1px solid ${C.gray300}` }}>
+                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
+                  <Input label="Full name *" placeholder="Amit Sharma" value={form.name} onChange={set("name")} required />
+                  <Input label="Email *" type="email" placeholder="amit@email.com" value={form.email} onChange={set("email")} required />
+                </div>
+                <Input label="Phone number" type="tel" placeholder="+91 9876543210" value={form.phone} onChange={set("phone")} />
+                <div style={{ marginBottom:14 }}>
+                  <label style={{ fontSize:12, fontWeight:500, color:C.gray600, display:"block", marginBottom:5 }}>
+                    Subject
+                  </label>
+                  <select value={form.subject} onChange={set("subject")}
+                    style={{ width:"100%", padding:"9px 12px", border:`1px solid ${C.gray300}`,
+                      borderRadius:8, fontSize:13, fontFamily:"inherit", color:C.gray800, outline:"none" }}>
+                    <option value="general">General Enquiry</option>
+                    <option value="agent">Agent Support</option>
+                    <option value="buyer">Buyer Assistance</option>
+                    <option value="listing">Listing Issue</option>
+                    <option value="billing">Billing & Subscription</option>
+                    <option value="legal">Legal / RERA</option>
+                    <option value="press">Press & Partnership</option>
+                    <option value="career">Careers</option>
+                  </select>
+                </div>
+                <Input label="Message *" placeholder="Tell us how we can help you…" rows={4} value={form.message} onChange={set("message")} required />
+                <Btn variant="primary" fullWidth onClick={handleSubmit} disabled={loading || !form.name || !form.email || !form.message}>
+                  {loading ? "Sending…" : "Send Message →"}
+                </Btn>
+              </div>
+            )}
+          </div>
+
+          {/* Office details */}
+          <div>
+            <h2 style={{ fontSize:20, fontWeight:700, margin:"0 0 20px" }}>Our Office</h2>
+            {offices.map(o => (
+              <div key={o.type} style={{ background:C.white, borderRadius:12, padding:24,
+                border:`1px solid ${C.gray300}`, marginBottom:16 }}>
+                <div style={{ fontSize:12, fontWeight:700, color:C.blue, textTransform:"uppercase",
+                  letterSpacing:".06em", marginBottom:14 }}>{o.type}</div>
+                {[
+                  ["📍 Address", o.address],
+                  ["📞 Phone",   o.phone],
+                  ["📱 Mobile",  o.mobile],
+                  ["✉️ Email",   o.email],
+                  ["🕐 Hours",   o.hours],
+                  ["🚇 Metro",   o.metro],
+                ].map(([l, v]) => (
+                  <div key={l} style={{ display:"flex", gap:10, marginBottom:10, alignItems:"flex-start" }}>
+                    <span style={{ color:C.gray600, fontSize:13, minWidth:82, flexShrink:0 }}>{l}</span>
+                    <span style={{ fontSize:13, color:C.gray700, lineHeight:1.5 }}>{v}</span>
+                  </div>
+                ))}
+              </div>
+            ))}
+
+            {/* Map placeholder */}
+            <div style={{ height:180, background:C.gray100, borderRadius:12,
+              border:`1px solid ${C.gray300}`, display:"flex", alignItems:"center",
+              justifyContent:"center", flexDirection:"column", gap:8, cursor:"pointer" }}
+              onClick={() => window.open("https://maps.google.com/?q=South+Ex+Tower+NDSE+New+Delhi", "_blank")}>
+              <span style={{ fontSize:32 }}>🗺️</span>
+              <span style={{ fontSize:13, fontWeight:500, color:C.gray600 }}>South Ex Tower, NDSE Part 2</span>
+              <span style={{ fontSize:11, color:C.blue }}>Click to open in Google Maps →</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Department contacts */}
+        <h2 style={{ fontSize:20, fontWeight:700, margin:"0 0 20px" }}>Departmental Contacts</h2>
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:12 }}>
+          {departments.map(d => (
+            <div key={d.dept} style={{ background:C.white, borderRadius:10, padding:"16px 18px",
+              border:`1px solid ${C.gray300}` }}>
+              <div style={{ fontSize:13, fontWeight:600, marginBottom:4 }}>{d.dept}</div>
+              <div style={{ fontSize:12, color:C.gray600, marginBottom:6 }}>{d.desc}</div>
+              <a href={`mailto:${d.email}`}
+                style={{ fontSize:12, color:C.blue, textDecoration:"none", fontWeight:500 }}>
+                ✉️ {d.email}
+              </a>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// RESOURCES PAGE — guides, FAQs, blog
+// ═══════════════════════════════════════════════════════════════
+function ResourcesPage({ setScreen }) {
+  const [tab, setTab] = useState("buyers");
+
+  const buyerGuides = [
+    { icon:"🏠", title:"First-Time Buyer's Guide",       read:"8 min", tag:"Guide",  desc:"Everything you need to know about buying property in India — from budget planning to registration." },
+    { icon:"📋", title:"RERA: What Buyers Must Know",    read:"5 min", tag:"Legal",  desc:"How India’s real estate regulation protects you and what to verify before signing." },
+    { icon:"💰", title:"Home Loan Guide 2024",           read:"6 min", tag:"Finance",desc:"Compare banks, calculate EMI, and understand the end-to-end home loan process." },
+    { icon:"🔍", title:"How to Spot a Fake Listing",     read:"4 min", tag:"Tips",   desc:"Red flags in property listings and how PropVault’s verification keeps you safe." },
+    { icon:"📅", title:"Site Visit Checklist",           read:"3 min", tag:"Tips",   desc:"20 things to check on every property visit before making an offer." },
+    { icon:"⚖️", title:"Stamp Duty & Registration Fees", read:"7 min", tag:"Legal",  desc:"State-by-state breakdown of stamp duty, registration costs, and GST on property." },
+  ];
+
+  const agentGuides = [
+    { icon:"📸", title:"Photography Tips for Listings",  read:"4 min", tag:"Guide",  desc:"How great photos get 3x more enquiries. Lighting, angles, and equipment guide." },
+    { icon:"📊", title:"PropVault Analytics Explained",  read:"5 min", tag:"Product",desc:"Make the most of your analytics dashboard to optimise listing performance." },
+    { icon:"💼", title:"Choosing the Right Plan",        read:"3 min", tag:"Guide",  desc:"Basic vs Pro vs Premium — which plan is right for your listing volume?" },
+    { icon:"🤝", title:"Converting Leads to Deals",      read:"6 min", tag:"Sales",  desc:"Scripts, timing, and follow-up strategies that close more deals." },
+    { icon:"🔖", title:"How to Use Featured Slots",      read:"3 min", tag:"Product",desc:"When to feature a listing and how it boosts visibility in search results." },
+    { icon:"📝", title:"Writing Listing Descriptions",   read:"4 min", tag:"Guide",  desc:"The formula for listing descriptions that generate 2x more leads." },
+  ];
+
+  const faqs = [
+    { q:"Is PropVault free for buyers?",               a:"Yes. Buyers can search, save, enquire, and schedule visits completely free." },
+    { q:"How are agents verified on PropVault?",       a:"Every agent submits RERA registration proof, PAN, and business documents. Our team verifies each manually before approval." },
+    { q:"How long does listing approval take?",        a:"Our team reviews listings within 24 hours on weekdays. You’ll get an email once approved or if revisions are needed." },
+    { q:"Can I list a property without a subscription?", a:"No. Agents need an active subscription to post listings. A 14-day free trial is available on sign-up." },
+    { q:"What is the PropVault satisfaction guarantee?", a:"If you’re not satisfied with your subscription in the first 7 days, contact support for a full refund." },
+    { q:"Does PropVault charge a commission on deals?", a:"No. PropVault is a subscription-only platform. We never take a cut of your deal." },
+  ];
+
+  const guides = tab === "buyers" ? buyerGuides : agentGuides;
+
+  return (
+    <div>
+      <div style={{ background:`linear-gradient(135deg,${C.blue},${C.blueDark})`,
+        color:"#fff", padding:"52px 32px", textAlign:"center" }}>
+        <div style={{ maxWidth:560, margin:"0 auto" }}>
+          <h1 style={{ fontSize:32, fontWeight:800, margin:"0 0 12px" }}>Resources</h1>
+          <p style={{ fontSize:15, opacity:.85 }}>
+            Guides, tips, and FAQs to help buyers and agents make better decisions.
+          </p>
+        </div>
+      </div>
+
+      <div style={{ maxWidth:1100, margin:"0 auto", padding:"48px 32px" }}>
+        {/* Tab switcher */}
+        <div style={{ display:"flex", gap:6, marginBottom:32, borderBottom:`1px solid ${C.gray300}`, paddingBottom:0 }}>
+          {[["buyers","🏠 For Buyers"],["agents","🏢 For Agents"]].map(([id,label]) => (
+            <button key={id} onClick={() => setTab(id)}
+              style={{
+                padding:"9px 20px", border:"none", cursor:"pointer", fontFamily:"inherit",
+                fontSize:14, fontWeight: tab===id?600:400,
+                color: tab===id?C.blue:C.gray600,
+                background:"transparent",
+                borderBottom: `2px solid ${tab===id?C.blue:"transparent"}`,
+                marginBottom:-1,
+              }}>
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {/* Article grid */}
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:16, marginBottom:56 }}>
+          {guides.map(g => (
+            <div key={g.title} style={{ background:C.white, borderRadius:12, padding:"20px",
+              border:`1px solid ${C.gray300}`, cursor:"pointer", transition:"box-shadow .15s" }}
+              onMouseEnter={e=>e.currentTarget.style.boxShadow="0 4px 16px rgba(0,0,0,.08)"}
+              onMouseLeave={e=>e.currentTarget.style.boxShadow="none"}>
+              <div style={{ fontSize:28, marginBottom:10 }}>{g.icon}</div>
+              <div style={{ display:"flex", gap:6, marginBottom:8 }}>
+                <span style={{ background:C.blueLight, color:C.blue, fontSize:10, fontWeight:600,
+                  padding:"2px 8px", borderRadius:20 }}>{g.tag}</span>
+                <span style={{ fontSize:11, color:C.gray400 }}>{g.read} read</span>
+              </div>
+              <div style={{ fontSize:14, fontWeight:600, marginBottom:6, lineHeight:1.4 }}>{g.title}</div>
+              <div style={{ fontSize:12, color:C.gray600, lineHeight:1.6 }}>{g.desc}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* FAQ section */}
+        <h2 style={{ fontSize:22, fontWeight:700, margin:"0 0 24px" }}>Frequently Asked Questions</h2>
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16, marginBottom:40 }}>
+          {faqs.map(f => (
+            <div key={f.q} style={{ background:C.white, borderRadius:10, padding:"18px 20px",
+              border:`1px solid ${C.gray300}` }}>
+              <div style={{ fontSize:13, fontWeight:600, marginBottom:8, color:C.gray800 }}>
+                Q: {f.q}
+              </div>
+              <div style={{ fontSize:13, color:C.gray600, lineHeight:1.6 }}>
+                {f.a}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* CTA */}
+        <div style={{ background:C.blueLight, borderRadius:12, padding:"28px 32px",
+          display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+          <div>
+            <div style={{ fontSize:16, fontWeight:600, marginBottom:4 }}>Still have questions?</div>
+            <div style={{ fontSize:13, color:C.gray600 }}>Our team is happy to help Mon–Sat, 9 AM–6 PM.</div>
+          </div>
+          <div style={{ display:"flex", gap:8 }}>
+            <Btn onClick={() => setScreen("contact")}>Contact Us</Btn>
+            <Btn variant="primary" onClick={() => setScreen("auth")}>Get Started Free</Btn>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// PUBLIC AGENTS DIRECTORY
+// ═══════════════════════════════════════════════════════════════
+function PubAgentsPage({ setScreen, setSelectedAgent }) {
+  const [search, setSearch] = useState("");
+  const [city, setCity]     = useState("all");
+  const [plan, setPlan]     = useState("all");
+
+  const cities = ["all","Delhi","Mumbai","Bangalore","Chennai","Ahmedabad","Lucknow"];
+
+  const filtered = AGENTS
+    .filter(a => a.status === "Active")
+    .filter(a => city === "all" || a.city === city)
+    .filter(a => plan === "all" || a.plan === plan)
+    .filter(a => !search || a.company.toLowerCase().includes(search.toLowerCase()) ||
+                 a.name.toLowerCase().includes(search.toLowerCase()));
+
+  return (
+    <div>
+      <div style={{ background:`linear-gradient(135deg,${C.blue},${C.blueDark})`,
+        color:"#fff", padding:"52px 32px", textAlign:"center" }}>
+        <h1 style={{ fontSize:32, fontWeight:800, margin:"0 0 12px" }}>Find a Verified Agent</h1>
+        <p style={{ fontSize:15, opacity:.85, marginBottom:28 }}>
+          Every agent on PropVault is RERA-registered and manually verified by our team.
+        </p>
+        <input
+          value={search} onChange={e => setSearch(e.target.value)}
+          placeholder="Search agents by name or company…"
+          style={{ width:"100%", maxWidth:440, padding:"11px 18px", borderRadius:8,
+            border:"none", fontSize:14, fontFamily:"inherit", outline:"none" }}
+        />
+      </div>
+
+      <div style={{ maxWidth:1100, margin:"0 auto", padding:"40px 32px" }}>
+        {/* Filters */}
+        <div style={{ display:"flex", gap:8, marginBottom:24, flexWrap:"wrap", alignItems:"center" }}>
+          <span style={{ fontSize:12, color:C.gray600, fontWeight:500 }}>City:</span>
+          {cities.map(c => (
+            <button key={c} onClick={() => setCity(c)}
+              style={{ padding:"5px 14px", borderRadius:20, fontSize:12, cursor:"pointer",
+                fontFamily:"inherit", border:`1px solid ${city===c?C.blue:C.gray300}`,
+                background:city===c?C.blue:"transparent", color:city===c?"#fff":C.gray600 }}>
+              {c==="all"?"All Cities":c}
+            </button>
+          ))}
+          <span style={{ fontSize:12, color:C.gray600, fontWeight:500, marginLeft:8 }}>Plan:</span>
+          {["all","Basic","Pro","Premium"].map(p => (
+            <button key={p} onClick={() => setPlan(p)}
+              style={{ padding:"5px 14px", borderRadius:20, fontSize:12, cursor:"pointer",
+                fontFamily:"inherit", border:`1px solid ${plan===p?C.blue:C.gray300}`,
+                background:plan===p?C.blue:"transparent", color:plan===p?"#fff":C.gray600 }}>
+              {p==="all"?"All Plans":p}
+            </button>
+          ))}
+        </div>
+
+        <div style={{ fontSize:13, color:C.gray600, marginBottom:16 }}>
+          Showing {filtered.length} verified agent{filtered.length!==1?"s":""}
+        </div>
+
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:16 }}>
+          {filtered.map(a => (
+            <div key={a.id} style={{ background:C.white, borderRadius:12, padding:"22px 20px",
+              border:`1px solid ${C.gray300}`, cursor:"pointer" }}
+              onClick={() => { setSelectedAgent(a); setScreen("agent-profile"); }}>
+              <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:14 }}>
+                <div style={{ width:48, height:48, borderRadius:10, background:C.blueLight,
+                  display:"flex", alignItems:"center", justifyContent:"center",
+                  fontWeight:700, color:C.blue, fontSize:20 }}>{a.company[0]}</div>
+                <div>
+                  <div style={{ fontSize:14, fontWeight:600 }}>{a.company}</div>
+                  <div style={{ fontSize:12, color:C.gray600 }}>{a.name}</div>
+                </div>
+                <span style={{ marginLeft:"auto", fontSize:10, fontWeight:600, padding:"2px 8px",
+                  borderRadius:20, background:C.blueLight, color:C.blue }}>{a.plan}</span>
+              </div>
+              <div style={{ display:"flex", gap:16, fontSize:12, color:C.gray600, marginBottom:12 }}>
+                <span>📍 {a.city}</span>
+                <span>🏠 {a.listings} listings</span>
+                <span>✓ Verified</span>
+              </div>
+              <Btn fullWidth size="sm" onClick={e => { e.stopPropagation(); setSelectedAgent(a); setScreen("agent-profile"); }}>
+                View Profile →
+              </Btn>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// PUBLIC LAYOUT WRAPPER — SiteHeader + content + SiteFooter
+// Only wraps marketing/public screens, not dashboards
+// ═══════════════════════════════════════════════════════════════
+function PublicLayout({ screen, setScreen, children, isLoggedIn, role }) {
+  return (
+    <div style={{ display:"flex", flexDirection:"column", minHeight:"100vh" }}>
+      <SiteHeader screen={screen} setScreen={setScreen} isLoggedIn={isLoggedIn} role={role} />
+      <main style={{ flex:1 }}>
+        {children}
+      </main>
+      <SiteFooter setScreen={setScreen} />
+    </div>
+  );
+}
+
+
+// ─── Root App ─────────────────────────────────────────────────
+/**
+ * Global state: isLoggedIn, currentUser, role, screen history,
+ * favs, detailProp, selectedAgent, notifCount.
+ *
+ * Auth gate: unauthenticated users see AuthScreen when trying
+ * to access protected routes. Public browsing is always allowed.
+ */
+export default function App() {
+  // ── Auth ──────────────────────────────────────────────────
+  const [isLoggedIn,    setIsLoggedIn]    = useState(false);
+  const [currentUser,   setCurrentUser]   = useState(null);
+  const [role,          setRole]          = useState("buyer");
+
+  // ── Navigation ────────────────────────────────────────────
+  const [screen,        setScreen]        = useState("home");
+  const [screenHistory, setScreenHistory] = useState([]);
+
+  // ── Shared cross-screen data ──────────────────────────────
+  const [detailProp,    setDetailProp]    = useState(null);
+  const [selectedAgent, setSelectedAgent] = useState(null);
+  const [favs,          setFavs]          = useState([]);
+  const [notifCount,    setNotifCount]    = useState(2);
+
+  // Agent's own listings — lifted here so AddPropertyScreen (create/edit)
+  // and MyPropsScreen (list/delete/feature) share one source of truth.
+  const [agentProps,    setAgentProps]    = useState(() => PROPERTIES.map(p => ({...p})));
+  const [editingProp,   setEditingProp]   = useState(null); // null = create mode
+
+  // ── Navigation helpers ────────────────────────────────────
+  const navigateTo = (s) => {
+    setScreenHistory(h => [...h.slice(-10), screen]);
+    setScreen(s);
+    if (s === "notifications") setNotifCount(0);
+    window.scrollTo(0, 0);
+  };
+
+  const goBack = () => {
+    const prev = screenHistory[screenHistory.length - 1];
+    setScreenHistory(h => h.slice(0, -1));
+    setScreen(prev || (role === "buyer" ? "search" : role === "agent" ? "agent-dash" : "admin-dash"));
+  };
+
+  // ── Role switch ───────────────────────────────────────────
+  const handleSetRole = (r) => {
+    setRole(r);
+    setScreen(r === "buyer" ? "buyer-dash" : r === "agent" ? "agent-dash" : "admin-dash");
+    setScreenHistory([]);
+  };
+
+  // ── Auth actions ──────────────────────────────────────────
+  const handleLogin = (user, userRole) => {
+    setCurrentUser(user);
+    setRole(userRole);
+    setIsLoggedIn(true);
+    // buyers land on their personal dashboard; agents and admins on theirs
+    setScreen(
+      userRole === "buyer" ? "buyer-dash"
+      : userRole === "agent" ? "agent-dash"
+      : "admin-dash"
+    );
+    setScreenHistory([]);
+  };
+
+  const handleLogout = () => {
+    setIsLoggedIn(false);
+    setCurrentUser(null);
+    setRole("buyer");
+    setScreen("search");
+    setScreenHistory([]);
+    setFavs([]);
+    setNotifCount(0);
+  };
+
+  // ── Screen renderer ───────────────────────────────────────
+  const renderScreen = () => {
+    // ── Always public ──────────────────────────────────────
+    if (screen === "auth")            return <AuthScreen onLogin={handleLogin} setScreen={navigateTo} />;
+    if (screen === "forgot-password") return <ForgotPasswordScreen setScreen={navigateTo} />;
+
+    // ── Public browsing + marketing pages (guest OK) ─────────
+    const publicScreens = {
+      "home": (
+        <PublicLayout screen={screen} setScreen={navigateTo} isLoggedIn={isLoggedIn} role={role}>
+          <HomePage setScreen={navigateTo} setDetailProp={setDetailProp} />
+        </PublicLayout>
+      ),
+      "about": (
+        <PublicLayout screen={screen} setScreen={navigateTo} isLoggedIn={isLoggedIn} role={role}>
+          <AboutPage setScreen={navigateTo} />
+        </PublicLayout>
+      ),
+      "contact": (
+        <PublicLayout screen={screen} setScreen={navigateTo} isLoggedIn={isLoggedIn} role={role}>
+          <ContactPage setScreen={navigateTo} />
+        </PublicLayout>
+      ),
+      "resources": (
+        <PublicLayout screen={screen} setScreen={navigateTo} isLoggedIn={isLoggedIn} role={role}>
+          <ResourcesPage setScreen={navigateTo} />
+        </PublicLayout>
+      ),
+      "pub-agents": (
+        <PublicLayout screen={screen} setScreen={navigateTo} isLoggedIn={isLoggedIn} role={role}>
+          <PubAgentsPage setScreen={navigateTo} setSelectedAgent={setSelectedAgent} />
+        </PublicLayout>
+      ),
+      "search": (
+        <PublicLayout screen={screen} setScreen={navigateTo} isLoggedIn={isLoggedIn} role={role}>
+          <SearchScreen
+            setScreen={navigateTo} setDetailProp={setDetailProp}
+            setSelectedAgent={setSelectedAgent}
+            favs={favs} setFavs={setFavs} isLoggedIn={isLoggedIn}
+          />
+        </PublicLayout>
+      ),
+      "detail": (
+        <PublicLayout screen={screen} setScreen={navigateTo} isLoggedIn={isLoggedIn} role={role}>
+          <DetailScreen
+            prop={detailProp} onBack={goBack}
+            favs={favs} setFavs={setFavs}
+            setScreen={navigateTo} setDetailProp={setDetailProp}
+            setSelectedAgent={setSelectedAgent}
+          />
+        </PublicLayout>
+      ),
+      "agent-profile": (
+        <PublicLayout screen={screen} setScreen={navigateTo} isLoggedIn={isLoggedIn} role={role}>
+          <AgentPublicProfile
+            agent={selectedAgent || AGENTS[0]}
+            setScreen={navigateTo} setDetailProp={setDetailProp}
+          />
+        </PublicLayout>
+      ),
+      "compare": (
+        <PublicLayout screen={screen} setScreen={navigateTo} isLoggedIn={isLoggedIn} role={role}>
+          <PropertyCompareScreen setScreen={navigateTo} setDetailProp={setDetailProp} />
+        </PublicLayout>
+      ),
+      "map-search": (
+        <PublicLayout screen={screen} setScreen={navigateTo} isLoggedIn={isLoggedIn} role={role}>
+          <MapSearchScreen setScreen={navigateTo} setDetailProp={setDetailProp} />
+        </PublicLayout>
+      ),
+    };
+    if (publicScreens[screen]) return publicScreens[screen];
+
+    // ── Auth-gated: redirect guests to login ───────────────
+    if (!isLoggedIn) {
+      return <AuthScreen onLogin={handleLogin} setScreen={navigateTo} returnTo={screen} />;
+    }
+
+    // ── Authenticated screens ──────────────────────────────
+    switch (screen) {
+      // Buyer
+      case "buyer-dash":
+        return (
+          <BuyerDashboard
+            setScreen={navigateTo} setDetailProp={setDetailProp}
+            favs={favs} setFavs={setFavs}
+          />
+        );
+      case "favorites":
+        return <FavoritesScreen favs={favs} setFavs={setFavs} setDetailProp={setDetailProp} setScreen={navigateTo} />;
+
+      // Agent
+      case "agent-dash":
+        return <AgentDashboard setScreen={navigateTo} currentUser={currentUser} />;
+      case "analytics":
+        return <AgentAnalyticsScreen setScreen={navigateTo} />;
+      case "add-prop":
+        return (
+          <AddPropertyScreen
+            setScreen={navigateTo}
+            editingProp={editingProp}
+            setEditingProp={setEditingProp}
+            agentProps={agentProps}
+            setAgentProps={setAgentProps}
+          />
+        );
+      case "my-props":
+        return (
+          <MyPropsScreen
+            setScreen={navigateTo}
+            setDetailProp={setDetailProp}
+            agentProps={agentProps}
+            setAgentProps={setAgentProps}
+            setEditingProp={setEditingProp}
+          />
+        );
+      case "featured":
+        return <FeaturedManagementScreen setScreen={navigateTo} />;
+      case "leads":
+        return <LeadsScreen setScreen={navigateTo} />;
+      case "visits":
+        return <VisitManagementScreen setScreen={navigateTo} />;
+      case "subscription":
+        return <SubscriptionScreen setScreen={navigateTo} />;
+      case "notifications":
+        return <NotificationCenter setScreen={navigateTo} />;
+      case "agent-my-profile":
+        return <AgentMyProfileScreen setScreen={navigateTo} />;
+      case "agent-profile-edit":
+        return <AgentProfileEditScreen setScreen={navigateTo} />;
+
+      // Admin
+      case "admin-dash":
+        return <AdminDash setScreen={navigateTo} />;
+      case "admin-agents":
+        return <AdminAgents setScreen={navigateTo} setSelectedAgent={setSelectedAgent} />;
+      case "admin-listings":
+        return <AdminListings setScreen={navigateTo} setDetailProp={setDetailProp} />;
+      case "admin-subs":
+        return <AdminSubs setScreen={navigateTo} />;
+      case "admin-revenue":
+        return <AdminRevenueScreen setScreen={navigateTo} />;
+      case "admin-users":
+        return <AdminUsers setScreen={navigateTo} setSelectedAgent={setSelectedAgent} />;
+      case "admin-settings":
+        return <AdminSettings setScreen={navigateTo} />;
+
+      default:
+        return (
+          <SearchScreen
+            setScreen={navigateTo} setDetailProp={setDetailProp}
+            setSelectedAgent={setSelectedAgent}
+            favs={favs} setFavs={setFavs} isLoggedIn={isLoggedIn}
+          />
+        );
+    }
+  };
+
+  // Authenticated dashboard screens get the compact Topbar, not SiteHeader.
+  // Public screens are already wrapped in PublicLayout (which includes SiteHeader+SiteFooter).
+  const isDashboardScreen = isLoggedIn && !["home","about","contact","resources",
+    "pub-agents","search","detail","agent-profile","compare","map-search",
+    "auth","forgot-password"].includes(screen);
+
+  return (
+    <div style={{ fontFamily:"'Inter',system-ui,sans-serif", minHeight:"100vh", background:C.gray100 }}>
+      {isDashboardScreen && (
+        <Topbar
+          role={role} setRole={handleSetRole}
+          screen={screen} setScreen={navigateTo}
+          notifCount={notifCount}
+          user={currentUser} onLogout={handleLogout}
+          isLoggedIn={isLoggedIn}
+        />
+      )}
+      <div style={{ maxWidth: isDashboardScreen ? 1400 : "none", margin:"0 auto" }}>
+        {renderScreen()}
+      </div>
+    </div>
+  );
+}
