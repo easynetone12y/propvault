@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 <div align="center">
 
 # PropVault
@@ -369,3 +370,6 @@ Unauthorised copying, distribution, or modification of this code is strictly pro
 <div align="center">
   Built with ❤️ in New Delhi, India
 </div>
+=======
+# propvault
+>>>>>>> 32134f598a0a35e2c7d3fe6a2a7452a3749ab827
